@@ -1209,4 +1209,19 @@ certificate route also gained the matching full-bleed print CSS as a
 fallback when popups are blocked. Generation verified byte-exact; audit
 ALL GREEN across all 20 sections.
 
+## 43. The launch pack — 30 September 2026 · OS v80 · 15 Aug 2026
+
+**Emails on the Desktop.** Four branded HTML emails (gold/black, crown,
+RFX voice): the main launch-day announcement, plus the three-part sequence
+— ONE-WEEK (what's waiting inside), FORTY-EIGHT (the first cohort sets the
+standard), DAY-OF (the doors are open, proof not just a certificate).
+**Short-form pack.** Social captions (IG/FB), a WhatsApp broadcast block,
+Stories slides and countdown captions — all ready to paste.
+
+**In-OS countdown.** The dashboard now carries a quiet gold banner —
+"THE ACADEMY OPENS IN 46 DAYS" with a Reserve-your-place CTA — that
+flips to a green "THE DOORS ARE OPEN" state on 30 September. Static,
+on-theme, no timers; hidden for the founder. Audit ALL GREEN across all
+20 sections; OS v80.
+
 — Zorro (System B), 15 August 2026
