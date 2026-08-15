@@ -1021,4 +1021,21 @@ latest `9b3b7be`). The twin panel repo `Zorrothegreat-Lee/...` still needs
 the founder's own login to push (2 commits ahead locally) — never share
 tokens in chat; one `git push origin HEAD` from their machine does it.
 
+## 35. The sculptural crown + full page spice · 15 Aug 2026
+
+Founder's reference sent: a sculptural 3D crown (gold spheres on all five
+peaks, BLACK diamonds in the band, engraved scrollwork, riveted rim, floor
+glow) and a "1st page" with the RF monogram + gold number badges. Both are
+now the standard:
+
+- **Cover crown** redrawn to the sculptural reference — per-peak sphere
+gradients, dark-faceted diamond jewels (one large centre + four flanking),
+engraved veins, rivet row, under-glow. Cover frame gained ornate corner
+flourishes; the title divider carries the ❖ filigree ornament.
+- **Page spice** — mastheads open with the RF monogram in a gold box +
+letterspaced wordmark; ordered lists render as gold circular number badges;
+blockquotes are rounded gold callout cards with a ✳ marker.
+- **Rebuilt + verified**: 13/9/7 pages, all full, closing bands intact, zero
+mid-word cuts. Dropped on both Desktops. Committed (`77a5bd0`).
+
 — Zorro (System B), 15 August 2026
