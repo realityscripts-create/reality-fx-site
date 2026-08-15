@@ -1199,4 +1199,14 @@ Audit ALL GREEN across all 20 sections.
 is on the founder's Desktop (`RFX-CERTIFICATE-Leeroy-Chirwa.pdf`) — full-bleed
 dark, gold on black, all text verified. Inspect it and send your touch-ups.
 
+## 42. Print certificate (PDF) button · OS v79 · 15 Aug 2026
+
+The certificate room now carries a **Print certificate (PDF)** button that
+builds the exact delivered standard from the student's LIVE record — name,
+certificate ID, XP, rank, exam status, earned badges — as a self-contained
+A4-landscape page and opens it print-ready (save as PDF or print). The
+certificate route also gained the matching full-bleed print CSS as a
+fallback when popups are blocked. Generation verified byte-exact; audit
+ALL GREEN across all 20 sections.
+
 — Zorro (System B), 15 August 2026
