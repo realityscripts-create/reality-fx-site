@@ -317,9 +317,9 @@ so a student never accidentally sends a phone number or an ID into a room.
 - **System A storage:** a localStorage-backed database (`db.js`) with versioned migrations, snapshots and backups — the demo carries the full institution on a student's device, and production plugs the same contracts into Netlify Functions.
 - **The OS server** (`.freebuff/tools/os-handoff-server.pl`): the local rail that speaks the same protocol as production — handoff, sessions, device trust, rooms, leaderboard, PII incidents, audit.
 - **Production API** (`netlify/functions/osapi.js`): the same contracts served from Netlify Functions on the live site; `_redirects` routes `/os/api/*` to the function.
-- **Email:** Resend via the mail rail — registration emails, verification codes, invoices, guardian confirmations. `RESEND_API_KEY` + `RFX_MAIL_FROM` flip the demo code into a live emailed code worldwide. The vars are set as Netlify env vars, or baked automatically into the function bundle at deploy time from the local `secrets.env` (the free-plan path — `process.env` always wins, so UI-set vars override the bake).
-- **Deployment:** `deploy-live.sh` — one command: audit gate → stage the OS → Netlify REST pipeline (content-addressed, only changed files upload) → verify live stamp + rails.
-- **Hosting:** Netlify (free tier), global CDN, custom domains with SSL, serverless functions & storage.
+- **Email:** Resend via the mail rail — registration emails, verification codes, invoices, guardian confirmations. `RESEND_API_KEY` + `RFX_MAIL_FROM` flip the demo code into a live emailed code worldwide. The vars are set as environment variables, or baked automatically into the function bundle at deploy time from the local `secrets.env` (`process.env` always wins, so UI-set vars override the bake).
+- **Deployment:** `deploy-live.sh` — one command: audit gate → stage the OS → content-addressed deploy pipeline (only changed files upload) → verify live stamp + rails.
+- **Hosting:** Netlify's global edge network — world-class CDN, custom domains with SSL, serverless functions & storage.
 
 ### The communication rails
 

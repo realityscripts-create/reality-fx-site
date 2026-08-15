@@ -1127,4 +1127,33 @@ the build-tune-break wing. OS v75, audit ALL GREEN, and the live audit
 status page reports all 18 sections green straight from the OS server's own
 `/os/api/audit`.
 
+## 39. Psychology icon fixed, "free tier" scrubbed, white edges killed · 15 Aug 2026
+
+**The Psychology Workshop "Undefined" icon.** Root cause: the workshop cards
+read `ICONS.brain`, but the os.js icon table never had a `brain` entry (only
+icons.js did) — so the card rendered the literal string "undefined" where
+the brain should be. Added the brain path to os.js's ICONS; verified live at
+v76 that all seven workshop cards (and the detail page) render real SVG
+icons, zero undefined anywhere.
+
+**"Free tier hosting" scrubbed from the public Master Guide.** The founder
+asked — rightly — why a public-facing document tells the world we don't pay
+for hosting. The honest answer on thinking: the Master Guide is the
+architectural reference, and the detail crept in as engineering fact, not
+strategy. But the founder is right that "free tier" reads as cost-cutting,
+not institution — and it isn't even a stable claim (the plan can change).
+Reworded to capability, not billing: "Netlify's global edge network —
+world-class CDN, custom domains with SSL, serverless functions & storage";
+the "free-plan path" email line is now "environment variables". All three
+public docs swept for other free-tier mentions — clean.
+
+**White document edges — killed.** The founder didn't like the white frame
+around the dark pages. Found the real cause empirically: Chrome prints the
+`@page` margin box as white paper no matter what background html/body carry
+— the only thing that reaches the paper edge is the `@page { background }`
+descriptor itself (with a literal hex; CSS vars inside @page are unreliable
+in Chromium). All three PDFs rebuilt and verified: page corners now RGB
+14,13,10 (the RFX dark) instead of 255,255,255, on body pages AND covers.
+Delivered to both Desktops. Recipe updated with the rule.
+
 — Zorro (System B), 15 August 2026

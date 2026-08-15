@@ -126,6 +126,17 @@ cover's black without a fade). Verified: all three covers re-printed
 13/9/7, crown pixel-checked on page 1 of each PDF, peaks + spheres fully
 visible. Rebuild flow unchanged.
 
+**15 Aug 2026 (white document edges — killed).** The founder wanted the
+page edges dark, not white-framed. Chrome prints the @page margin box as
+white paper no matter what background the html/body carry — the ONLY thing
+that reaches the paper edge is the `@page { background }` descriptor
+(verified empirically: a minimal page with html+body dark still printed
+white corners; adding `background: #0e0d0a` to `@page` turned all four
+corners dark, pixel-checked at 60dpi). Rule of thumb for this pipeline:
+**the dark page must be declared on `@page` itself, with a literal hex —
+CSS vars inside @page are unreliable in Chromium.** All three PDFs rebuilt
+13/9/7, body-page corners verified dark on pages 2/3, delivered.
+
 ## Why the PDFs are good
 
 PDFs are produced by valid runs (now 12/8/6 pages, A4, verified) and the

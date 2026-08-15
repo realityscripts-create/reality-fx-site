@@ -17,7 +17,11 @@ my $body = convert($md);
 
 my $css = <<'CSS';
 :root { --gold: #d4af37; --gold-soft: #c9b37a; --ink: #f2ecdc; --mut: #9a937f; --line: rgba(212,175,55,.28); --bg: #0e0d0a; --panel: #16140d; --panel2: #1c1a12; }
-@page { size: A4; margin: 15mm 13mm 17mm; }
+/* The @page background paints the WHOLE paper — including the margin box —
+   so the document is dark edge to edge, never white-framed. Chrome/Edge
+   honour it (verified by pixel-checking the page corners). The literal hex
+   is deliberate: CSS vars inside @page are unreliable in Chromium. */
+@page { size: A4; margin: 15mm 13mm 17mm; background: #0e0d0a; }
 * { box-sizing: border-box; }
 html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: Georgia, "Times New Roman", serif; font-size: 10.5pt; line-height: 1.55; }
