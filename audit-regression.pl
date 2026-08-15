@@ -464,7 +464,8 @@ print "\n[15] PWA + deploy rails — the app layer ships with the site\n";
     my @miss;
     push @miss, "rfx-pwa staged"   unless $dep =~ /rfx-pwa/;
     push @miss, "_headers staged"  unless $dep =~ /_headers/;
-    ok(!@miss ? "deploy-live.sh stages rfx-pwa + _headers (Service-Worker-Allowed: /)" : fail("deploy missing: " . join(", ", @miss)));
+    push @miss, "assets staged"    unless $dep =~ /os\/assets/;
+    ok(!@miss ? "deploy-live.sh stages rfx-pwa + _headers + assets/slides (Service-Worker-Allowed: /)" : fail("deploy missing: " . join(", ", @miss)));
     open my $mh, "<", "rfx-pwa/manifest.json" or fail("manifest.json missing") and return;
     local $/; my $mf = <$mh>; close $mh;
     my $mfok = $mf =~ /"start_url"\s*:\s*"\// && $mf =~ /"scope"\s*:\s*"\// && $mf =~ /icon-192/ && $mf =~ /icon-512/ ? 1 : 0;
@@ -478,14 +479,53 @@ print "\n[15] PWA + deploy rails — the app layer ships with the site\n";
     ok($ix =~ /rfx-pwa\/manifest\.json/ && $ix =~ /rfx-pwa\/register\.js/ ? "OS shell wired to the PWA layer" : fail("OS index missing the PWA manifest/register refs"));
 }
 
-# ---------- 16. LIVE PWA PROBE (the deployed site really carries the app) ----------
+# ---------- 16. DATA-RIGHTS RAIL (the student's "my data / delete me" right) ----------
+# The profile room's Privacy panel files copy/deletion requests to the
+# /api/data-requests board; the ref is the receipt and a branded confirmation
+# email goes out when mail is configured. This section keeps the whole rail
+# wired: production function + local server mirror + OS panel + receipt path.
+sec(16);
+print "\n[16] Data-rights rail — the student's copy/deletion request, end to end\n";
+{
+    open my $fh, "<", "netlify/functions/osapi.js" or fail("osapi.js missing") and return;
+    local $/; my $fn = <$fh>; close $fh;
+    my @miss;
+    push @miss, "GET data-requests"  unless $fn =~ /GET" && path === "data-requests"/;
+    push @miss, "POST data-requests" unless $fn =~ /POST" && path === "data-requests"/;
+    push @miss, "DR- ref minting"    unless $fn =~ /DR-\"/;
+    push @miss, "receipt email"      unless $fn =~ /dataRequestHTML/ && $fn =~ /deliverMail\(pl\.email/ && $fn =~ /receiptEmail/;
+    ok(!@miss ? "production function: GET+POST data-requests, DR- refs, receipt email wired" : fail("osapi.js missing: " . join(", ", @miss)));
+    open my $lh, "<", ".freebuff/tools/os-handoff-server.pl" or fail("os-handoff-server.pl missing") and return;
+    local $/; my $loc = <$lh>; close $lh;
+    my @lmiss;
+    push @lmiss, "local POST data-requests" unless $loc =~ /POST' && \$clean eq '\/os\/api\/data-requests'/;
+    push @lmiss, "local GET data-requests"  unless $loc =~ /GET' && \$clean eq '\/os\/api\/data-requests'/;
+    push @lmiss, "local receiptEmail"       unless $loc =~ /receiptEmail => 'pending'/;
+    ok(!@lmiss ? "local server mirrors the rail (GET+POST, pending receipt in dev)" : fail("local server missing: " . join(", ", @lmiss)));
+    open my $oh, "<", "$OS/js/os.js" or die;
+    local $/; my $os = <$oh>; close $oh;
+    my @omiss;
+    push @omiss, "Privacy panel"        unless $os =~ /Privacy &amp; your data/;
+    push @omiss, "export button"        unless $os =~ /pf-data-export/ && $os =~ /Request a copy of my data/;
+    push @omiss, "delete button"        unless $os =~ /pf-data-delete/ && $os =~ /Request account deletion/;
+    push @omiss, "ref receipt shown"    unless $os =~ /pf-data-status/ && $os =~ /j\.ref/;
+    push @omiss, "email-notice line"    unless $os =~ /receiptEmail/ && $os =~ /confirmation email is on its way/;
+    ok(!@omiss ? "OS profile room: Privacy panel, both buttons, ref + email-notice status" : fail("OS panel missing: " . join(", ", @omiss)));
+    # Data minimisation: the panel must not collect anything beyond name, email,
+    # studentId — no phone, no address, no government ID.
+    my $body = $os =~ /fileDataRequest\(kind\)\s*\{[^}]*\}/s ? $& : "";
+    my $leak = ($body =~ /phone|address|gov|idNumber|passport/i && $body !~ /studentId/ && $body !~ /government ID/) ? 1 : 0;
+    ok(!$leak ? "data-request payload carries only name, email, studentId (data minimisation)" : fail("data-request payload collects more than name/email/studentId"));
+}
+
+# ---------- 17. LIVE PWA PROBE (the deployed site really carries the app) ----------
 # Gated by LIVE_PROBE=1 on purpose: verifying the LIVE site is a status
 # report, not a deploy gate — the first deploy after a bump would otherwise
 # block itself (live still runs the previous version). deploy-live.sh runs
 # its own live PWA probes in step 4 AFTER the upload, where failures are real.
 if ($ENV{LIVE_PROBE}) {
-    sec(16);
-    print "\n[16] Live PWA probe — the deployed site really carries the app\n";
+    sec(17);
+    print "\n[17] Live PWA probe — the deployed site really carries the app\n";
     my $live = "https://reality-fx-os.netlify.app";
     my $mf = qx{curl -s -m 10 "$live/rfx-pwa/manifest.json" 2>/dev/null};
     if ($mf =~ /"start_url"\s*:\s*"\/"/ && $mf =~ /"scope"\s*:\s*"\/"/) {
@@ -531,8 +571,9 @@ if ($ENV{AUDIT_JSON}) {
       13 => [ "Journal perf budget",  "no timers/polling, in-place refresh, batched writes, storage on action only" ],
       14 => [ "Pill standard + icon guard", "one 26px pill rhythm OS-wide + bare-svg 1em guard (no giant crowns)" ],
       15 => [ "PWA + deploy rails",        "deploy stages rfx-pwa + _headers; manifest/sw match the root layout; OS shell wired" ],
+      16 => [ "Data-rights rail",         "profile Privacy panel -> /api/data-requests (GET+POST), DR- ref receipt, receipt email wired" ],
     );
-    $meta{16} = [ "Live PWA probe (LIVE_PROBE=1)", "deployed site serves the manifest, sw scope header, install guide, matching stamp" ] if $ENV{LIVE_PROBE};
+    $meta{17} = [ "Live PWA probe (LIVE_PROBE=1)", "deployed site serves the manifest, sw scope header, install guide, matching stamp" ] if $ENV{LIVE_PROBE};
     for my $n (sort { $a <=> $b } keys %meta) {
         push @rows, { n => $n, name => $meta{$n}[0], detail => $meta{$n}[1], ok => ($secOk{$n} ? JSON::PP::true : JSON::PP::false) };
     }

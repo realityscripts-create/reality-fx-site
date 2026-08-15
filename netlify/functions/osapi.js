@@ -150,28 +150,65 @@ async function postHandoff(pl) {
    503 with a clear reason, so the demo never breaks and the moment
    RESEND_API_KEY + RFX_MAIL_FROM exist in Netlify env vars, delivery
    is live with zero code changes. */
-async function postMail(pl) {
-  if (!pl || !pl.to || !pl.subject || !pl.html) return bad("to, subject and html required");
+/* deliverMail never throws and never blocks its caller — it returns
+   { ok:true, id } or { ok:false, reason }. The relay (postMail) and the
+   data-rights receipt both use it, so an unconfigured key degrades to a
+   clear "pending" state instead of failing the student's request. */
+async function deliverMail(to, subject, html) {
   const key = rfxEnv("RESEND_API_KEY");
   const from = rfxEnv("RFX_MAIL_FROM");
-  if (!key || !from) {
-    return json(503, { ok: false, reason: "mail not configured — set RESEND_API_KEY and RFX_MAIL_FROM in Netlify env vars" });
-  }
+  if (!key || !from) return { ok: false, reason: "mail not configured — set RESEND_API_KEY and RFX_MAIL_FROM in Netlify env vars" };
   let res;
   try {
     res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: from, to: pl.to, subject: pl.subject, html: pl.html, reply_to: rfxEnv("RFX_MAIL_REPLY_TO") || from }),
+      body: JSON.stringify({ from: from, to: to, subject: subject, html: html, reply_to: rfxEnv("RFX_MAIL_REPLY_TO") || from }),
     });
   } catch (e) {
-    return json(502, { ok: false, reason: "resend unreachable" });
+    return { ok: false, reason: "resend unreachable" };
   }
   const body = await res.text().catch(function () { return ""; });
-  if (!res.ok) return json(502, { ok: false, reason: "resend " + res.status + " " + body.slice(0, 200) });
+  if (!res.ok) return { ok: false, reason: "resend " + res.status + " " + body.slice(0, 200) };
   let id = "";
   try { id = JSON.parse(body).id || ""; } catch (e) { /* no body */ }
-  return ok({ ok: true, id: id });
+  return { ok: true, id: id };
+}
+
+async function postMail(pl) {
+  if (!pl || !pl.to || !pl.subject || !pl.html) return bad("to, subject and html required");
+  const r = await deliverMail(pl.to, pl.subject, pl.html);
+  if (!r.ok) {
+    const status = r.reason && r.reason.indexOf("not configured") >= 0 ? 503 : 502;
+    return json(status, { ok: false, reason: r.reason });
+  }
+  return ok({ ok: true, id: r.id });
+}
+
+/* The data-rights receipt — same gold crown wordmark + house rule as every
+   Reality FX email, so a student can never doubt the reference is from us.
+   Sent the moment a copy/deletion request lands on the data-rights rail. */
+function escHtml(s) {
+  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function dataRequestHTML(req) {
+  const kind = req.kind === "delete" ? "account deletion" : "a copy of your data";
+  const kindLine = req.kind === "delete"
+    ? "We will close your account and remove your records. Nothing is deleted instantly — the Registrar reviews every request, and you can change your mind before it is processed."
+    : "We are preparing a copy of everything we hold on you. It will reach you through the protected student environment, and the Registrar will confirm once it is ready.";
+  return "<div style=\"border-bottom:2px solid #d4af37;padding-bottom:16px;margin-bottom:22px;\">" +
+    "<div style=\"font-family:Georgia,serif;color:#080808;font-size:24px;font-weight:700;\">&#9819; Reality FX <span style=\"color:#a8842a;\">Academy</span></div>" +
+    "<div style=\"font-size:9px;letter-spacing:3px;color:#8a8a8a;font-family:Arial,sans-serif;margin-top:2px;\">THE TRADING ACADEMY · YOUR DATA RIGHTS</div>" +
+    "<div style=\"font-family:Georgia,serif;font-style:italic;font-size:12px;color:#a8842a;margin-top:8px;\">&quot;Every lesson is a trade. Every trade is a lesson.&quot;</div></div>" +
+    "<p style=\"font-family:Arial,sans-serif;font-size:14px;color:#333;\">Dear " + escHtml(req.name) + ",</p>" +
+    "<p style=\"font-family:Arial,sans-serif;font-size:14px;color:#333;\">We received your request for <b>" + kind + "</b>. Your reference number is <b style=\"color:#a8842a;\">" + escHtml(req.ref) + "</b> — keep it if you need to follow up.</p>" +
+    "<p style=\"font-family:Arial,sans-serif;font-size:13px;color:#555;line-height:1.55;\">" + kindLine + "</p>" +
+    "<p style=\"font-family:Arial,sans-serif;font-size:13px;color:#555;line-height:1.55;\">This request was recorded on the Academy's data-rights board — who filed it, what they asked for, and when. That record is part of how we keep every student's information accountable.</p>" +
+    "<p style=\"font-family:Arial,sans-serif;font-size:13px;color:#777;\">If you did not make this request, contact the reception desk immediately at realityfx20@gmail.com — we will flag it and freeze any processing.</p>" +
+    "<div style=\"margin-top:26px;padding-top:14px;border-top:1px dashed #c9b37a;font-size:11px;color:#8a8a8a;font-family:Arial,sans-serif;\">" +
+    "<div style=\"font-family:Georgia,serif;font-size:13px;color:#a8842a;font-weight:700;\">Reality FX — The Trading Academy</div>" +
+    "This is official Reality FX correspondence. Not expecting it? Contact the reception desk at realityfx20@gmail.com.<br/>" +
+    "realityfx.netlify.app · &quot;Every lesson is a trade. Every trade is a lesson.&quot;</div>";
 }
 
 /* The branded device-check email — same gold crown wordmark + house rule as
@@ -696,7 +733,16 @@ exports.handler = async (event) => {
       status: "received",
     };
     await mutate("dataRequests", "data-requests", (list) => { list.unshift(req); return list.slice(0, 500); });
-    return ok({ ok: true, ref: req.ref, kind: req.kind });
+    // The receipt: the reference rides in the response (the board + UI hold
+    // it) and, when an address was provided, a branded confirmation email
+    // goes out too. Mail is best-effort — an unconfigured key means
+    // "pending", never a failed request.
+    let receiptEmail = "no-address";
+    if (pl.email) {
+      const r = await deliverMail(pl.email, "Reality FX — your data request " + req.ref, dataRequestHTML(req));
+      receiptEmail = r.ok ? "sent" : "pending";
+    }
+    return ok({ ok: true, ref: req.ref, kind: req.kind, receiptEmail: receiptEmail });
   }
 
   if (method === "GET" && path === "rooms") return getRooms();

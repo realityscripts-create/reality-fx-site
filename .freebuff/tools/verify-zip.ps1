@@ -13,7 +13,7 @@ try {
     $sr = New-Object System.IO.StreamReader($d.Open())
     $html = $sr.ReadToEnd()
     $sr.Close()
-    Write-Output ("stamp_v67=" + $html.Contains('v=67'))
+    Write-Output ("stamp_v69=" + $html.Contains('v=69'))
   } else { Write-Output 'stamp_v65=NO-INDEX' }
   $pwa = @($z.Entries | Where-Object { $_.FullName -like 'rfx-pwa/*' })
   Write-Output ("pwaFiles=" + $pwa.Count + " pwaManifest=" + @($z.Entries | Where-Object { $_.FullName -eq 'rfx-pwa/manifest.json' }).Count)

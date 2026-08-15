@@ -64,6 +64,7 @@ rm -rf "$STAGE" && mkdir -p "$STAGE"
 cp -r REALITY-FOREX-TRADING-/os/index.html "$STAGE/"
 cp -r REALITY-FOREX-TRADING-/os/css   "$STAGE/"
 cp -r REALITY-FOREX-TRADING-/os/js    "$STAGE/"
+cp -r REALITY-FOREX-TRADING-/os/assets "$STAGE/assets"   # 741 chapter slides — the OS loads them at runtime
 cp _redirects "$STAGE/_redirects"
 # the PWA layer (manifest, service worker, install guide) rides every deploy,
 # and its _headers grants the worker site-wide scope (Service-Worker-Allowed: /)

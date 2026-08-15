@@ -411,7 +411,11 @@ sub serve {
       close $c; return;
     }
     my $req = log_data_request($pl);
-    resp_json($c, 200, { ok => JSON::PP::true, ref => $req->{ref}, kind => $req->{kind} });
+    # The receipt email rides the production rail (osapi.js sends it via
+    # Resend when the key is configured). On the local dev server the mail
+    # rail is not configured, so the receipt stays 'pending' — the board and
+    # the reference number are the receipt, exactly like the demo-code flow.
+    resp_json($c, 200, { ok => JSON::PP::true, ref => $req->{ref}, kind => $req->{kind}, receiptEmail => 'pending' });
     close $c; return;
   }
   if ($method eq 'GET' && $clean eq '/os/api/rooms') {
