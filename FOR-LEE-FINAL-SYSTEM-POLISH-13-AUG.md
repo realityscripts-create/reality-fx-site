@@ -1224,4 +1224,16 @@ flips to a green "THE DOORS ARE OPEN" state on 30 September. Static,
 on-theme, no timers; hidden for the founder. Audit ALL GREEN across all
 20 sections; OS v80.
 
+## 44. Correction — the countdown belongs on the website · OS v81 · 15 Aug 2026
+
+The founder's own catch, and he was right: a "Reserve your place" CTA in
+the OS only reaches people already enrolled — the guarded classroom — so
+nobody who actually needed the button could ever see it. 😄 The countdown
+now lives on the **System A hero** (index.html), between the welcome line
+and the doors grid, where prospective students see it: "The Academy opens
+in 46 days" with a gold Reserve-your-place button wired to register.html,
+flipping to a green "The doors are open → Begin registration" state on
+30 September. The OS dashboard is clean again. Mirrored to the System A
+repo; audit ALL GREEN; OS v81.
+
 — Zorro (System B), 15 August 2026
