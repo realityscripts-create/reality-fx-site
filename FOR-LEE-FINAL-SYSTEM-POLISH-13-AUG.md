@@ -1038,4 +1038,22 @@ blockquotes are rounded gold callout cards with a ✳ marker.
 - **Rebuilt + verified**: 13/9/7 pages, all full, closing bands intact, zero
 mid-word cuts. Dropped on both Desktops. Committed (`77a5bd0`).
 
+## 36. The founder's crown, embedded + the outer-repo push prep · 15 Aug 2026
+
+**The crown is now the founder's own render.** No more hand-drawn SVG — the
+cover embeds the crown cropped straight from the approved "concept 1 cover
+page.png" (gold-bbox located programmatically, 620x385 crop stored as
+`.freebuff/tools/crown-src.png`, base64 data URI + radial edge-fade mask so
+it melts into the black). Corner frame + filigree divider stay. All three
+PDFs rebuilt and verified (13/9/7, bands intact), delivered to both
+Desktops. Committed (`7411f0f`).
+
+**Outer repo made pushable.** The founder is pushing `reality-fx-site`
+(221 tracked files) to GitHub. History held ~330MB of junk blobs — desktop
+cache DBs and an old zip — which GitHub hard-rejects (>100MB per blob).
+Purged from local history with filter-branch + gc: pack dropped 517MB →
+2.1MB, all 19 commits intact, submodule pointer intact, backup bundle at
+`C:/tmp/rfx-outer-backup.bundle`. Ready for one `git remote add origin` +
+`git push` — the founder does the GitHub-side steps (create repo, push).
+
 — Zorro (System B), 15 August 2026
