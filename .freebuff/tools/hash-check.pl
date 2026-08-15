@@ -1,0 +1,21 @@
+use strict; use warnings;
+use Digest::SHA qw(sha1_hex);
+use File::Find;
+my $DIR = "C:/Users/user/Desktop/rfx-os-deploy";
+my (%files);
+find(sub {
+  my $full = $File::Find::name;
+  return if !-f $full;
+  return if -d $full;
+  my $rel = substr($full, length($DIR) + 1);
+  $rel =~ s/\\/\//g;
+  return if $rel =~ m{^netlify/};
+  open my $fh, "<", $full or die "$full: $!";
+  binmode $fh; local $/; my $data = <$fh>; close $fh;
+  $files{"/$rel"} = sha1_hex($data);
+}, $DIR);
+print "hashed: ", scalar(keys %files), " files\n";
+my @k = sort keys %files;
+print "$_\n" for @k[0..4];
+print "index.html: ", ($files{"/index.html"} || "MISSING"), "\n";
+print "os.js: ", ($files{"/js/os.js"} || "MISSING"), "\n";

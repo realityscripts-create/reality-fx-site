@@ -1,0 +1,3 @@
+    ]
+  },
+  { id: 13, title: "Technical Analysis", slides: 95,

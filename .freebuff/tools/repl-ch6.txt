@@ -1,0 +1,5 @@
+    },
+__FRAG__
+  },
+  {
+    id: 6, title: "Trading Psychology", slides: 48,

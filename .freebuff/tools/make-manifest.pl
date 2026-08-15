@@ -1,0 +1,26 @@
+use strict; use warnings;
+use Digest::SHA qw(sha1_hex);
+use File::Find;
+use IO::Compress::Zip qw(zip $ZipError);
+use JSON::PP;
+my $DIR = "C:/Users/user/Desktop/rfx-os-deploy";
+my (%files);
+find(sub {
+  my $full = $File::Find::name;
+  return if !-f $full;
+  return if -d $full;
+  my $rel = substr($full, length($DIR) + 1);
+  $rel =~ s/\\/\//g;
+  return if $rel =~ m{^netlify/};
+  open my $fh, "<", $full or die "$full: $!";
+  binmode $fh; local $/; my $data = <$fh>; close $fh;
+  $files{"/$rel"} = sha1_hex($data);
+}, $DIR);
+my $fnZip = ".freebuff/tools/osapi-fn.zip";
+my $fnSrc = "$DIR/netlify/functions/osapi.js";
+zip $fnSrc => $fnZip, Name => "osapi.js" or die "zip failed: $ZipError";
+open my $fz, "<", $fnZip or die $!;
+binmode $fz; local $/; my $fnData = <$fz>; close $fz;
+my $fnHash = sha1_hex($fnData);
+my %manifest = ( files => \%files, functions => { osapi => $fnHash } );
+print JSON::PP->new->canonical->encode(\%manifest);

@@ -1,0 +1,5 @@
+    },
+__FRAG__
+  },
+  {
+    id: 7, title: "Risk Management", slides: 77,

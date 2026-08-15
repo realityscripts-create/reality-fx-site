@@ -1,0 +1,6 @@
+# RFX OS API rail -> Netlify Function (Blob-backed)
+# The OS frontend fetches relative `api/...` paths; System A POSTs to
+# /os/api/handoff. Both land on the same function, which serves the
+# original URL (200 rewrite) so the browser never sees a redirect.
+/os/api/*  /.netlify/functions/osapi/:splat  200
+/api/*     /.netlify/functions/osapi/:splat  200

@@ -1,0 +1,77 @@
+# ============================================================
+# Reality FX — .gitignore
+# Secrets, live student data, build artifacts and downloads
+# NEVER belong in git — even in a private repo.
+# ============================================================
+
+# ---- Secrets & credentials (never commit) ----
+.freebuff/tools/secrets.env
+.freebuff/tools/acct.json
+.freebuff/tools/*-token.txt
+.freebuff/tools/*-key.txt
+.freebuff/tools/get-token.pl
+.freebuff/tools/deploy-probe.pl
+.freebuff/tools/deploy-flow.pl
+.freebuff/tools/deploy-api.pl
+.freebuff/tools/env-body*.json
+netlify/functions/rfx-env.js
+.freebuff/tools/*resp*.json
+
+# ---- Live data / state (student records, sessions, devices, stores) ----
+.freebuff/tools/system-a-state.json
+.freebuff/tools/system-a-state.json.*
+.freebuff/tools/os-*.json
+.freebuff/tools/os-*.json.*.bak
+.freebuff/tools/user-*.json
+.freebuff/tools/state*.json
+.freebuff/tools/thread*.json
+.freebuff/tools/*-resp.json
+.freebuff/tools/manifest-*.json
+.freebuff/tools/pub-*.json
+.freebuff/tools/pr-*.json
+.freebuff/tools/create-*.json
+.freebuff/tools/dep*.json
+.freebuff/tools/deploys.json
+.freebuff/tools/live-*.json
+.freebuff/tools/srm-check.json
+.freebuff/tools/netlify-openapi.json
+.freebuff/tools/openapi.json
+
+# ---- Logs ----
+*.log
+.freebuff/tools/*.err.log
+.freebuff/tools/flow-*.log
+
+# ---- Build artifacts & staged deploys ----
+RFX-OS-DEPLOY-READY.zip
+.freebuff/tools/deploy-stage/
+.freebuff/tools/deploy-stage-test/
+.freebuff/tools/html/
+.freebuff/deploy/
+.freebuff/tools/*.zip
+
+# ---- Tool downloads (re-downloadable, large) ----
+.freebuff/tools/poppler-*/
+.freebuff/tools/poppler.zip
+.freebuff/tools/node-lts.zip
+.freebuff/tools/tesseract-setup.exe
+.freebuff/tools/osapi-fn*.zip
+
+# ---- Superseded forks (System-A-live is the current registrar) ----
+Reality-Fx-Registration-and-Member-s-panel/
+
+# ---- Backups (contain real student records — never in git) ----
+.freebuff/backups/
+
+# ---- Misc ----
+.freebuff/tools/*.bak*
+.freebuff/tools/data.js.bak-*
+.freebuff/tools/.DS_Store
+Thumbs.db
+
+# ---- Desktop tooling caches & OCR scratch ----
+.freebuff/*.db
+.freebuff/*.db-shm
+.freebuff/*.db-wal
+.freebuff/ocr-*/
+.freebuff/*.out

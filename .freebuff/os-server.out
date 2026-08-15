@@ -1,0 +1,6 @@
+Subroutine load_challenges redefined at .freebuff/tools/os-handoff-server.pl line 137.
+Subroutine save_challenges redefined at .freebuff/tools/os-handoff-server.pl line 145.
+serving C:/Users/user/Downloads/REALITY FX TRADING/reality-fx-site/REALITY-FOREX-TRADING- on 127.0.0.1:49270  (handoffs -> C:/Users/user/Downloads/REALITY FX TRADING/reality-fx-site/.freebuff/tools/os-handoffs.json)
+Use of uninitialized value in string eq at .freebuff/tools/os-handoff-server.pl line 348, <GEN7> line 7.
+Not an ARRAY reference at .freebuff/tools/os-handoff-server.pl line 796.
+Not an ARRAY reference at .freebuff/tools/os-handoff-server.pl line 796.

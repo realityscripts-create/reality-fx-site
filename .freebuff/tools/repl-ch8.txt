@@ -1,0 +1,5 @@
+    },
+__FRAG__
+  },
+  {
+    id: 8, title: "Pairs", slides: 43,
