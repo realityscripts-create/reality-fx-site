@@ -836,4 +836,27 @@ git push -u origin main
 ```
 (The OS repo is already pushed — that one's done.)
 
+---
+
+## §28 — 15 Aug 2026, day session: PWA install wired into onboarding
+
+The install guide is now linked in the three places a student first meets the
+Academy, all derived from the configured OS endpoint via a new `osInstallUrl()`
+(db.js, beside `osIndexUrl`) — never a hardcoded machine address:
+
+1. **Welcome email** (bridge.js) — "Put the Academy on your phone — Android &
+iPhone (works offline)" under the Enter RFX OS button, sent the moment the
+handshake lands.
+2. **Registration completion screen** (register.html + register.js) — a
+"Put the Academy on your phone" ghost button under Enter the Academy.
+3. **Member panel access card** (member.js, ACTIVE state) — "Get the Academy
+app — works on any phone" under the Enter button.
+
+Mirrored to both System A trees (lockstep green). Audit ALL GREEN.
+
+The System A twin repo (`Zorrothegreat-Lee/Reality-Fx-Registration-and-Member-s-panel`)
+has the change committed locally (`b18ca0c`) — the push needs Lee's own GitHub
+credentials (the machine's cached token belongs to realityscripts-create and
+denied 403). One `git push` from his machine.
+
 — Zorro (System B), 15 August 2026
