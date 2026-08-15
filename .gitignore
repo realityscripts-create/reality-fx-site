@@ -22,6 +22,7 @@ netlify/functions/rfx-env.js
 .freebuff/tools/system-a-state.json.*
 .freebuff/tools/os-*.json
 .freebuff/tools/os-*.json.*.bak
+.freebuff/tools/os-*.json.*.tmp
 .freebuff/tools/user-*.json
 .freebuff/tools/state*.json
 .freebuff/tools/thread*.json

@@ -151,7 +151,12 @@ print "\n[5] OS app — one stamp per asset, files exist\n";
     else { ok("OS single stamp: " . (keys(%v) ? join("", keys %v) : "none")); }
     while ($c =~ /(?:src|href)="((?!https?:|data:|#)[^"]+\.(?:js|css))"/g) {
         my $ref = $1;
-        if (!-f "$OS/$ref") { fail("OS index references missing $ref"); }
+        # Cross-tree refs (../rfx-pwa/* — the PWA layer) sit at the deploy
+        # root beside the OS; production serves them from there.
+        my $p;
+        if ($ref =~ m{^\.\./}) { (my $r = $ref) =~ s{^\.\./}{}; $p = "$ROOT/$r"; }
+        else { $p = "$OS/$ref"; }
+        if (!-f $p) { fail("OS index references missing $ref"); }
     }
 }
 
@@ -418,7 +423,39 @@ print "\n[13] Journal perf budget — no polling, no rebuild churn\n";
     ok($j =~ /addEventListener\("input", recompute\)/ ? "live math is event-driven, not a polling loop" : fail("live P/L math is not input-event driven"));
 }
 
-# ---------- 14. AUDIT JSON OUTPUT (feeds the live audit status page) ----------
+# ---------- 14. PILL STANDARD + GIANT-ICON GUARD (visual consistency) ----------
+sec(14);
+print "\n[14] Pill standard — one 26px rhythm — and the giant-icon guard\n";
+{
+    open my $fh, "<", "$OS/css/os.css" or die "can't read os.css";
+    local $/; my $css = <$fh>; close $fh;
+    # Every pill/chip family must carry the shared 26px rhythm. If a new
+    # family slips in at a different height, the dash loses its neatness
+    # standard one chip at a time — this is the tripwire.
+    my @families = qw(sys-state live-pill lesson-badge diff-chip rec-chip soon-chip tour-chip tier-pill badge-tier lane-you-pill hof-state pill sim-reward-chip);
+    my @off;
+    for my $fam (@families) {
+        # Some families also appear inside @media inner rules (e.g. the
+        # heartbeat row at narrow widths) — the base rule is the one that
+        # carries the rhythm, so ANY matching block with the full trio passes.
+        my @blocks = $css =~ /\.\Q$fam\E\s*\{[^}]*\}/gs;
+        if (!@blocks) { push @off, "$fam (no rule)"; next; }
+        my $ok = grep { /height:\s*26px/ && /border-radius:\s*(?:30|99|999)px/ && /white-space:\s*nowrap/ } @blocks;
+        push @off, $fam unless $ok;
+    }
+    ok(@off ? fail("off-standard families: " . join(", ", @off)) : scalar(@families) . " pill families share the 26px rhythm");
+    # The giant-icon guard: the unsized-crown bug (705x705px crowns on the
+    # dash) was killed at the root — bare inline SVGs now default to text
+    # size, and the footers carry no inline svg at all.
+    my $guard = $css =~ /^svg\s*\{\s*width:\s*1em;\s*height:\s*1em/m ? 1 : 0;
+    ok($guard ? "giant-icon guard in place (bare svg defaults to 1em)" : fail("svg base guard missing — an unsized crown can balloon to panel width"));
+    open my $fh2, "<", "$OS/js/os.js" or die;
+    local $/; my $os = <$fh2>; close $fh2;
+    my @footSvg = grep { /(?:mach-foot|hof-foot|guide-foot)/ && /<svg/i } split /\n/, $os;
+    ok(!@footSvg ? "dashboard footers carry no inline svg (no giant crown regression)" : fail("svg found on footer lines: " . join("; ", @footSvg)));
+}
+
+# ---------- 15. AUDIT JSON OUTPUT (feeds the live audit status page) ----------
 # Runs with AUDIT_JSON=1; the OS server's /os/api/audit endpoint executes this
 # and returns the machine's self-report for the founder's audit status page.
 if ($ENV{AUDIT_JSON}) {
@@ -437,6 +474,7 @@ if ($ENV{AUDIT_JSON}) {
       11 => [ "Forge Standard",       "all 13 chapters: per-lane slides/quiz/qpos, explain, anatomy" ],
       12 => [ "Trade Journal",        "module + route + six-stat rail (2,2,2 / 3,3) + local-only guarantee" ],
       13 => [ "Journal perf budget",  "no timers/polling, in-place refresh, batched writes, storage on action only" ],
+      14 => [ "Pill standard + icon guard", "one 26px pill rhythm OS-wide + bare-svg 1em guard (no giant crowns)" ],
     );
     for my $n (sort { $a <=> $b } keys %meta) {
         push @rows, { n => $n, name => $meta{$n}[0], detail => $meta{$n}[1], ok => ($secOk{$n} ? JSON::PP::true : JSON::PP::false) };

@@ -1,0 +1,26 @@
+{
+  "name": "Reality FX OS — Trading Academy",
+  "short_name": "RFX OS",
+  "description": "The Reality FX Trading Academy — thirteen chapters, three lanes, assessments, the trading laboratory, the trade journal and the live rooms. Your whole course lives on this device.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#0A0A0A",
+  "theme_color": "#C9A227",
+  "categories": ["education", "finance"],
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    { "src": "/rfx-pwa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/rfx-pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/rfx-pwa/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Journey", "short_name": "Journey", "url": "/#/map", "icons": [{ "src": "/rfx-pwa/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Trading Laboratory", "short_name": "Laboratory", "url": "/#/lab", "icons": [{ "src": "/rfx-pwa/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Trade Journal", "short_name": "Journal", "url": "/#/journal", "icons": [{ "src": "/rfx-pwa/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

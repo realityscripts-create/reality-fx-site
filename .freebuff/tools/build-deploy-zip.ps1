@@ -21,7 +21,9 @@ try {
   # the _redirects that route /os/api/* and /api/* to it.
   $extras = @(
     @{ Path = (Join-Path $ProjectRoot 'netlify');  ZipPrefix = 'netlify' },
-    @{ Path = (Join-Path $ProjectRoot '_redirects'); ZipPrefix = '' }
+    @{ Path = (Join-Path $ProjectRoot '_redirects'); ZipPrefix = '' },
+    @{ Path = (Join-Path $ProjectRoot 'rfx-pwa');  ZipPrefix = 'rfx-pwa' },
+    @{ Path = (Join-Path $ProjectRoot 'rfx-pwa/_headers'); ZipPrefix = '' }
   )
 
   function Add-FileEntry([string]$fullPath, [string]$entryName) {

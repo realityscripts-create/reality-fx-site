@@ -1,0 +1,10 @@
+# Service-Worker-Allowed: the worker lives in /rfx-pwa but must control
+# the whole site (scope "/") so the OS page and course assets go offline.
+/rfx-pwa/sw.js
+  Service-Worker-Allowed: /
+
+# Cache-busting correctness: never let the manifest or worker go stale.
+/rfx-pwa/manifest.json
+  Cache-Control: no-cache
+/rfx-pwa/sw.js
+  Cache-Control: no-cache
