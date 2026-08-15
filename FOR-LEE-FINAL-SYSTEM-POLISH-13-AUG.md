@@ -876,4 +876,27 @@ Share → Add to Home Screen hint on iOS, hidden once installed. Wired in `os.js
 layout, OS shell wired. Audit ALL GREEN at v=66 (15 sections). OS pushed to
 GitHub (`7958342`).
 
+---
+
+## §30 — 15 Aug 2026, day session: install hint + live PWA probe + a discovery
+
+**One-time install hint (v=67).** The sidebar Install button now pulses a soft
+gold glow the first time it appears per device (`S.pwaHintShown` flag) — a
+~3.2s subtle heartbeat in the brand's restrained language, gone on click, never
+repeated. Verified live: shows on the installable event, never re-nudges.
+
+**Live PWA probe in the audit.** Section 16, run with `LIVE_PROBE=1` — checks
+the deployed site really carries the app: manifest (valid, root layout), the
+service worker's `Service-Worker-Allowed: /` header (without it every install
+is blocked), the install guide, and the live-vs-local stamp. Deliberately
+non-gating (a fresh bump would otherwise block its own first deploy);
+`deploy-live.sh` gained a step 5 that runs the same probes AFTER the upload,
+with retries, and refuses to declare victory if the app layer didn't ship.
+
+**Discovery:** the first live probe shows production is at **v=10** — the v65–67
+builds never reached the live site (Netlify credits have been exhausted, so
+deploys are blocked: "credit usage exceeded"). The machine is honest about it:
+`LIVE_PROBE=1` reports the gap. The moment credits land, `bash deploy-live.sh`
+now walks the whole building AND proves the app layer is live in one command.
+
 — Zorro (System B), 15 August 2026
