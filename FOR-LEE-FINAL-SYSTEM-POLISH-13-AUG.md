@@ -795,4 +795,45 @@ v=64.
 `RFX-OS-DEPLOY-READY.zip` refreshed to `v=64` (772 entries, all 741 slide
 assets, functions + `_redirects`).
 
+---
+
+## §27 — 15 Aug 2026, pre-dawn autopilot round (v=65, the PWA + publishing night)
+
+**Git is now real.** The OS repo (`realityscripts-create/REALITY-FOREX-TRADING-`)
+received everything from the last week: `3d9d4e6` on `main` — the v65 OS with the
+gate lock contract, uniform pill standard, giant-icon guard, sim.js, journal.js
+and the ch1–4 Challenging/Elite depth push (14,627 insertions). The outer repo
+(whole ecosystem: System A, netlify functions, docs, tooling) is committed too,
+waiting only for a GitHub repo to be created to receive it (one command, below).
+
+**PWA layer built — and it is NOT in the OS file group.** `rfx-pwa/` lives at the
+repo root: manifest, service worker, register/push scaffolding, branded
+install guide, crown icons. The OS's only footprint is three lines in
+`index.html`. Verified in the production layout (OS staged at site root): all
+nine paths answer 200, manifest JSON valid, `start_url: "/"` matches how
+deploy-live.sh actually ships. The one rule documented in `rfx-pwa/README.md`:
+if the OS ever hosts under `/os/`, prefix the paths in manifest.json + sw.js.
+
+**Distribution playbook** — `RFX-DISTRIBUTION-PLAYBOOK.md` at repo root: PWA
+first (email link → install guide → home screen), APK only for Android
+power-users with a published SHA-256 (anti-phishing), stores deferred as a
+marketing badge, not a dependency. Also in the playbook: the dashboard now
+ends on the certification card (Laboratory / AI Mentor / Trade Journal pills
+moved above it), and the last two pill families (soon-chip, badge-tier) were
+brought onto the 26px standard so the whole OS is one size, one voice.
+
+**Audit grew a 14th section** — pill standard (13 families must carry the 26px
+rhythm) + giant-icon guard (bare svg defaults to 1em; footers carry no inline
+svg) — ALL GREEN at v=65, along with the corrected cross-tree asset check for
+the `../rfx-pwa/` wiring. Drop zip refreshed to v=65 (764 entries, 741 slides,
+rfx-pwa inside, verified).
+
+**To push the outer repo once you create it on GitHub:**
+```bash
+cd "C:/Users/user/Downloads/REALITY FX TRADING/reality-fx-site"
+git remote add origin https://github.com/<you>/reality-fx-site.git
+git push -u origin main
+```
+(The OS repo is already pushed — that one's done.)
+
 — Zorro (System B), 15 August 2026
