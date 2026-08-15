@@ -859,4 +859,21 @@ has the change committed locally (`b18ca0c`) — the push needs Lee's own GitHub
 credentials (the machine's cached token belongs to realityscripts-create and
 denied 403). One `git push` from his machine.
 
+---
+
+## §29 — 15 Aug 2026, day session: the in-OS Install button + a deploy bug caught
+
+The sidebar now carries an **Install app** button (v=66): 26px pill standard,
+download icon added to the OS stroke set, and it appears only when the device
+can actually install — `rfx:pwa-installable` on Android/Chrome/Edge, the
+Share → Add to Home Screen hint on iOS, hidden once installed. Wired in `os.js`
+(`wirePwaInstall`), guarded by the audit's pill-family list (14 families now).
+
+**A real deploy bug was caught while verifying:** `deploy-live.sh` never staged
+`rfx-pwa/` or `_headers` — the PWA would have shipped in the drop zip but been
+404 on the live site. Fixed (both are staged now), and the audit grew section 15
+"PWA + deploy rails": deploy stages the app layer, manifest/sw match the root
+layout, OS shell wired. Audit ALL GREEN at v=66 (15 sections). OS pushed to
+GitHub (`7958342`).
+
 — Zorro (System B), 15 August 2026
