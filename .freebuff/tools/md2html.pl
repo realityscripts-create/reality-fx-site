@@ -27,7 +27,9 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: Georgia
    if content needs another page, the browser makes another page. */
 .page { max-width: none; padding: 0; }
 .masthead { border-bottom: 2px solid var(--gold); padding-bottom: 14px; margin-bottom: 26px; }
-.masthead .crown { font-size: 26px; color: var(--gold); }
+.masthead .mast-top { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+.masthead .emblem { flex: 0 0 auto; width: 28px; height: 28px; border: 1.5px solid var(--gold); border-radius: 4px; font-family: Georgia, serif; font-size: 12pt; font-weight: 700; color: var(--gold); text-align: center; line-height: 25px; letter-spacing: 0; }
+.masthead .word { font-family: Arial, Helvetica, sans-serif; font-size: 8pt; letter-spacing: 4px; color: var(--gold); text-transform: uppercase; }
 .masthead h1 { font-family: Georgia, serif; font-size: 24pt; margin: 6px 0 2px; color: var(--ink); letter-spacing: .2px; }
 .masthead .sub { font-size: 8pt; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; font-family: Arial, Helvetica, sans-serif; }
 .masthead .tagline { font-style: italic; font-size: 10pt; color: var(--gold-soft); margin-top: 6px; }
@@ -40,7 +42,14 @@ strong { color: #fff; }
 em { color: inherit; }
 code { font-family: Consolas, "Courier New", monospace; font-size: 9pt; background: #1c1a12; border: 1px solid rgba(212,175,55,.3); border-radius: 3px; padding: 0 3px; color: #e8d79a; overflow-wrap: anywhere; }
 pre { background: #12100a; border: 1px solid rgba(212,175,55,.3); border-radius: 6px; padding: 10px 12px; white-space: pre-wrap; overflow-wrap: anywhere; page-break-inside: avoid; break-inside: avoid; font-family: Consolas, monospace; font-size: 8.5pt; color: #e8d79a; }
-ul, ol { margin: 8px 0; padding-left: 22px; }
+ul { margin: 8px 0; padding-left: 22px; }
+/* ordered lists get the gold circular badges — one per top-level item */
+ol { margin: 8px 0; padding-left: 0; list-style: none; counter-reset: rfx-list; }
+ol > li { counter-increment: rfx-list; position: relative; padding-left: 32px; margin: 8px 0; }
+ol > li::before { content: counter(rfx-list); position: absolute; left: 0; top: 1px; width: 21px; height: 21px; border-radius: 50%; background: linear-gradient(160deg, #f0d98c, #b58f2e); color: #241a05; font-family: Arial, Helvetica, sans-serif; font-weight: 700; font-size: 10pt; line-height: 21px; text-align: center; }
+ol ol, ol ul { padding-left: 18px; }
+ol ol { counter-reset: none; list-style: decimal; }
+ol ol > li::before { content: none; position: static; width: auto; height: auto; background: none; border-radius: 0; color: inherit; font: inherit; line-height: inherit; padding: 0; }
 li { margin: 4px 0; overflow-wrap: anywhere; }
 li > ul, li > ol { margin: 2px 0; }
 table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 9.5pt; }
@@ -48,8 +57,9 @@ tr { page-break-inside: avoid; break-inside: avoid; }
 td, th { overflow-wrap: break-word; }
 th { background: var(--panel2); color: var(--gold); text-align: left; font-weight: bold; }
 th, td { border: 1px solid var(--line); padding: 6px 9px; vertical-align: top; }
-blockquote { margin: 12px 0; padding: 10px 16px; border-left: 3px solid var(--gold); background: var(--panel); font-style: italic; color: #cfc7ae; page-break-inside: avoid; break-inside: avoid; overflow-wrap: anywhere; }
+blockquote { margin: 14px 0; padding: 12px 16px 12px 18px; border: 1px solid rgba(212,175,55,.45); border-left: 3px solid var(--gold); border-radius: 8px; background: linear-gradient(180deg, rgba(212,175,55,.07), rgba(212,175,55,.015)), var(--panel); font-style: italic; color: #e2d9bd; page-break-inside: avoid; break-inside: avoid; overflow-wrap: anywhere; }
 blockquote p { margin: 4px 0; }
+blockquote p:first-child::before { content: "\2733\00a0"; color: var(--gold); font-style: normal; }
 hr { border: 0; border-top: 1px solid var(--line); margin: 22px 0; }
 .footer { margin-top: 40px; border-top: 1px solid var(--line); padding-top: 10px; font-size: 8pt; color: var(--mut); text-align: center; font-family: Arial, Helvetica, sans-serif; letter-spacing: 1px; page-break-inside: avoid; break-inside: avoid; }
 .footer .gold { color: var(--gold); }
@@ -64,7 +74,7 @@ print $oh <<"HTML";
 <body>
 <div class="page">
   <div class="masthead">
-    <div class="crown">&#9819;</div>
+    <div class="mast-top"><span class="emblem">RF</span><span class="word">Reality FX &mdash; The Trading Academy</span></div>
     <h1>$title</h1>
     <div class="sub">$eyebrow</div>
     <div class="tagline">&ldquo;Every lesson is a trade. Every trade is a lesson.&rdquo;</div>

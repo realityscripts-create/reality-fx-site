@@ -84,6 +84,21 @@ masthead — one voice, cover to cover. The University doc also gained the
 opens" callout (the opening day = the day the live platform's credits are
 restored). Rebuilt page counts stayed 13/9/7.
 
+**15 Aug 2026 (final) — the sculptural crown + page spice.** Founder's
+reference ("concept 1 cover page"): a sculptural 3D crown — five peaks each
+topped with a gold sphere, a band with BLACK diamond jewels (one large
+center + four flanking), engraved scrollwork, a riveted base rim, and a soft
+floor glow. The cover crown is now drawn to that exact standard (gradients
+per bead, dark-faceted diamonds, engraved veins in the peaks, rivet row,
+under-glow). The frame gained ornate corner flourishes (double L-line +
+diamond) and the title divider carries a ❖ filigree centre ornament.
+
+The page spice follows the "1st page" reference: the masthead now opens with
+the RF monogram in a gold box + letterspaced REALITY FX — THE TRADING
+ACADEMY; ordered lists render as gold circular number badges; blockquotes
+are rounded gold callout cards with a ✳ marker. Rebuilt page counts held at
+13/9/7 — all pages full, closing bands intact, zero mid-word cuts.
+
 ## Why the PDFs are good
 
 PDFs are produced by valid runs (now 12/8/6 pages, A4, verified) and the
