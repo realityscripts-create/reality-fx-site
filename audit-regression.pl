@@ -432,7 +432,7 @@ print "\n[14] Pill standard — one 26px rhythm — and the giant-icon guard\n";
     # Every pill/chip family must carry the shared 26px rhythm. If a new
     # family slips in at a different height, the dash loses its neatness
     # standard one chip at a time — this is the tripwire.
-    my @families = qw(sys-state live-pill lesson-badge diff-chip rec-chip soon-chip tour-chip tier-pill badge-tier lane-you-pill hof-state pill sim-reward-chip);
+    my @families = qw(sys-state live-pill lesson-badge diff-chip rec-chip soon-chip tour-chip tier-pill badge-tier lane-you-pill hof-state pill sim-reward-chip app-install-btn);
     my @off;
     for my $fam (@families) {
         # Some families also appear inside @media inner rules (e.g. the
@@ -455,7 +455,30 @@ print "\n[14] Pill standard — one 26px rhythm — and the giant-icon guard\n";
     ok(!@footSvg ? "dashboard footers carry no inline svg (no giant crown regression)" : fail("svg found on footer lines: " . join("; ", @footSvg)));
 }
 
-# ---------- 15. AUDIT JSON OUTPUT (feeds the live audit status page) ----------
+# ---------- 15. PWA + DEPLOY RAILS (the app layer rides every deploy) ----------
+sec(15);
+print "\n[15] PWA + deploy rails — the app layer ships with the site\n";
+{
+    open my $fh, "<", "deploy-live.sh" or fail("deploy-live.sh missing") and return;
+    local $/; my $dep = <$fh>; close $fh;
+    my @miss;
+    push @miss, "rfx-pwa staged"   unless $dep =~ /rfx-pwa/;
+    push @miss, "_headers staged"  unless $dep =~ /_headers/;
+    ok(!@miss ? "deploy-live.sh stages rfx-pwa + _headers (Service-Worker-Allowed: /)" : fail("deploy missing: " . join(", ", @miss)));
+    open my $mh, "<", "rfx-pwa/manifest.json" or fail("manifest.json missing") and return;
+    local $/; my $mf = <$mh>; close $mh;
+    my $mfok = $mf =~ /"start_url"\s*:\s*"\// && $mf =~ /"scope"\s*:\s*"\// && $mf =~ /icon-192/ && $mf =~ /icon-512/ ? 1 : 0;
+    ok($mfok ? "manifest valid for the root layout (start_url /, scope /, icons)" : fail("manifest paths wrong for the root layout"));
+    open my $sh, "<", "rfx-pwa/sw.js" or fail("sw.js missing") and return;
+    local $/; my $sw = <$sh>; close $sh;
+    my $swok = $sw =~ m{"/index.html"} && $sw =~ m{"/css/os.css"} && $sw =~ m{"/js/os.js"} ? 1 : 0;
+    ok($swok ? "service worker shell matches the root layout" : fail("sw.js shell paths off-layout"));
+    open my $ih, "<", "$OS/index.html" or die;
+    local $/; my $ix = <$ih>; close $ih;
+    ok($ix =~ /rfx-pwa\/manifest\.json/ && $ix =~ /rfx-pwa\/register\.js/ ? "OS shell wired to the PWA layer" : fail("OS index missing the PWA manifest/register refs"));
+}
+
+# ---------- 16. AUDIT JSON OUTPUT (feeds the live audit status page) ----------
 # Runs with AUDIT_JSON=1; the OS server's /os/api/audit endpoint executes this
 # and returns the machine's self-report for the founder's audit status page.
 if ($ENV{AUDIT_JSON}) {
@@ -475,6 +498,7 @@ if ($ENV{AUDIT_JSON}) {
       12 => [ "Trade Journal",        "module + route + six-stat rail (2,2,2 / 3,3) + local-only guarantee" ],
       13 => [ "Journal perf budget",  "no timers/polling, in-place refresh, batched writes, storage on action only" ],
       14 => [ "Pill standard + icon guard", "one 26px pill rhythm OS-wide + bare-svg 1em guard (no giant crowns)" ],
+      15 => [ "PWA + deploy rails",        "deploy stages rfx-pwa + _headers; manifest/sw match the root layout; OS shell wired" ],
     );
     for my $n (sort { $a <=> $b } keys %meta) {
         push @rows, { n => $n, name => $meta{$n}[0], detail => $meta{$n}[1], ok => ($secOk{$n} ? JSON::PP::true : JSON::PP::false) };

@@ -65,6 +65,10 @@ cp -r REALITY-FOREX-TRADING-/os/index.html "$STAGE/"
 cp -r REALITY-FOREX-TRADING-/os/css   "$STAGE/"
 cp -r REALITY-FOREX-TRADING-/os/js    "$STAGE/"
 cp _redirects "$STAGE/_redirects"
+# the PWA layer (manifest, service worker, install guide) rides every deploy,
+# and its _headers grants the worker site-wide scope (Service-Worker-Allowed: /)
+cp -r rfx-pwa "$STAGE/rfx-pwa"
+cp rfx-pwa/_headers "$STAGE/_headers"
 mkdir -p "$STAGE/netlify/functions"
 cp netlify/functions/osapi.js   "$STAGE/netlify/functions/"
 cp netlify/functions/envprobe.js "$STAGE/netlify/functions/"
