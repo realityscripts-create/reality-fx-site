@@ -998,4 +998,27 @@ and the drop zip is rebuilt complete: 741 slides, v=69, PWA layer, 237 MB.
 still no remote of its own, and the twin panel repo is ahead 2 of origin,
 waiting on Zorrothegreat-Lee's GitHub login (one `git push origin HEAD`).
 
+## 34. House-crown covers + RFX University opening-soon · 15 Aug 2026
+
+**The crown the founder loves.** Feedback: the geometric cover crown read
+"cheap"; the crown the brand loves is the classic chess-queen silhouette
+(U+265B) that rides every document masthead. The cover crown was redrawn to
+match it exactly — five beaded peaks (a bead on ALL five), a band with two
+etched stripes, filled silhouette, gold gradient + soft glow. Cover and
+mastheads now speak the same crown, one voice cover to cover. All three PDFs
+rebuilt and re-verified (13/9/7 pages, zero near-empty, closing bands
+intact) and dropped on both Desktops.
+
+**RFX University opening soon.** The University document now carries a
+prominent callout: Semester One begins the day the campus opens — the exact
+day our live platform's credits are restored. No fake date: the opening day
+IS the restore day, and every student who registers before it starts
+Semester One on the same line.
+
+**GitHub confirmation** — the founder asked which repo was "the GitHub":
+`realityscripts-create/REALITY-FOREX-TRADING-` is the OS (all pushed,
+latest `9b3b7be`). The twin panel repo `Zorrothegreat-Lee/...` still needs
+the founder's own login to push (2 commits ahead locally) — never share
+tokens in chat; one `git push origin HEAD` from their machine does it.
+
 — Zorro (System B), 15 August 2026
