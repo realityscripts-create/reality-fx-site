@@ -99,6 +99,17 @@ ACADEMY; ordered lists render as gold circular number badges; blockquotes
 are rounded gold callout cards with a ✳ marker. Rebuilt page counts held at
 13/9/7 — all pages full, closing bands intact, zero mid-word cuts.
 
+**15 Aug 2026 (final word) — the founder's own crown.** Lesson learned: no
+hand-drawn SVG beats the founder's render. `crown-src.png` is the crown
+cropped from the APPROVED concept cover ("concept 1 cover page.png", gold-
+bbox located programmatically at x 230..850, y 488..873 of the 1070x1470
+source), and make-cover.pl embeds it as a base64 data URI with a radial
+edge-fade mask so it melts into the cover's black. Rebuild flow unchanged
+(md2html → make-cover → Edge print); the crop recipe is in
+`crop-crown3.ps1` (kept in C:/tmp). If the founder ever approves a NEW crown
+render: replace `.freebuff/tools/crown-src.png` and rerun the three
+make-cover + print commands — nothing else changes.
+
 ## Why the PDFs are good
 
 PDFs are produced by valid runs (now 12/8/6 pages, A4, verified) and the
