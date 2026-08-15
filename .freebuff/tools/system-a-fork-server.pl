@@ -17,6 +17,7 @@ use IO::Socket::INET;
 use Fcntl ':flock';
 use File::Copy;
 use JSON::PP;
+use Time::Local;
 
 my $root = shift @ARGV || ".";
 my $port = shift @ARGV || 8124;
@@ -89,6 +90,38 @@ sub save_state_raw {
   return rename($tmp, $stateFile) ? 1 : 0;
 }
 
+sub gate_lookup_email {
+  # Extract exactly one throttle record from the raw store bytes — never a
+  # full decode. Finds the "loginAttempts" object by brace matching (its
+  # values are flat { count, lockedUntil } — no nested braces), then decodes
+  # only that slice. Keys are case-insensitive (the member panel lowercases
+  # emails at the door).
+  my ($email) = @_;
+  return {} unless -f $stateFile;
+  open my $fh, '<:raw', $stateFile or return {};
+  my $raw = do { local $/; <$fh> };
+  close $fh;
+  my $idx = index($raw, '"loginAttempts"');
+  return {} if $idx < 0;
+  # the key must be followed by optional whitespace then ':' — never mid-string
+  my $after = $idx + length('"loginAttempts"');
+  $after++ while $after < length($raw) && substr($raw, $after, 1) =~ /\s/;
+  return {} if $after >= length($raw) || substr($raw, $after, 1) ne ':';
+  my $open = index($raw, '{', $after);
+  return {} if $open < 0;
+  my $depth = 0; my $end = -1;
+  for (my $i = $open; $i < length($raw); $i++) {
+    my $ch = substr($raw, $i, 1);
+    if ($ch eq '{') { $depth++; }
+    elsif ($ch eq '}') { $depth--; if ($depth == 0) { $end = $i; last; } }
+  }
+  return {} if $end < 0;
+  my $obj = substr($raw, $open, $end - $open + 1);
+  my $recs = eval { JSON::PP->new->utf8->decode($obj) };
+  return {} unless $recs && ref($recs) eq 'HASH';
+  return $recs->{lc($email)} || {};
+}
+
 sub cors_headers {
   return "Access-Control-Allow-Origin: *\r\n" .
          "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n" .
@@ -156,6 +189,37 @@ sub serve {
   }
 
   my $clean = $path; $clean =~ s/\?.*$//;
+
+  if ($method eq 'OPTIONS' && $clean eq '/api/gate') {
+    resp_json($c, 204, {});
+    close $c; return;
+  }
+
+  if ($method eq 'GET' && $clean eq '/api/gate') {
+    # The gate (FOR-LEE §9.61-9.63): a live read of System A's own throttle
+    # record. Unlocked / unknown / expired -> { locked:false } — the OS
+    # heartbeat shows "Open" and sessions flow. Locked -> the OS refuses the
+    # session and shows the branded lock card with the countdown.
+    # NOTE: never load_state() here — a full JSON::PP decode of the multi-MB
+    # store can take minutes (the /api/state route exists for that reason).
+    # Scan for the one loginAttempts record instead: brace-matched, fast.
+    my ($email) = $path =~ /[?&]email=([^&]+)/;
+    $email = '' unless defined $email;
+    $email =~ s/%([0-9A-Fa-f]{2})/chr(hex($1))/eg;
+    my $rec = gate_lookup_email($email) || {};
+    my $until = $rec->{lockedUntil} || '';
+    my $untilEpoch = 0;
+    if ($until =~ /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/) {
+      $untilEpoch = timegm($6, $5, $4, $3, $2 - 1, $1 - 1900);
+    }
+    if ($untilEpoch > time()) {
+      my $mins = int(($untilEpoch - time()) / 60) + 1;
+      resp_json($c, 200, { locked => JSON::PP::true, lockedUntil => $until, minutesLeft => $mins });
+    } else {
+      resp_json($c, 200, { locked => JSON::PP::false });
+    }
+    close $c; return;
+  }
 
   if ($method eq 'OPTIONS' && $clean eq '/api/state') {
     resp_json($c, 204, {});

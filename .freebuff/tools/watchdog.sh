@@ -23,6 +23,7 @@ while true; do
   # student can never be missing on one port again.
   check 8123  perl .freebuff/tools/system-a-fork-server.pl System-A-live 8123 .freebuff/tools/system-a-state.json
   check 8124  perl .freebuff/tools/system-a-fork-server.pl System-A-live 8124 .freebuff/tools/system-a-state.json
+  check 8125  perl .freebuff/tools/system-a-fork-server.pl System-A-live 8125 .freebuff/tools/system-a-state.json
   check 49270 perl .freebuff/tools/os-handoff-server.pl REALITY-FOREX-TRADING- 49270
   sleep 8
 done

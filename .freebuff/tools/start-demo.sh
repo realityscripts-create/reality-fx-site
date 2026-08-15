@@ -23,6 +23,8 @@ echo "-----------------------"
 # logins diverge (a student present on one port and absent on the other).
 ensure 8123  perl .freebuff/tools/system-a-fork-server.pl System-A-live 8123 .freebuff/tools/system-a-state.json
 ensure 8124  perl .freebuff/tools/system-a-fork-server.pl System-A-live 8124 .freebuff/tools/system-a-state.json
+# 8125 — the gate fork: answers /api/gate (FOR-LEE §9.62) off the same store
+ensure 8125  perl .freebuff/tools/system-a-fork-server.pl System-A-live 8125 .freebuff/tools/system-a-state.json
 ensure 49270 perl .freebuff/tools/os-handoff-server.pl REALITY-FOREX-TRADING- 49270
 echo
 echo "  Reception  → http://127.0.0.1:8123/index.html"
