@@ -2,34 +2,41 @@
 <html lang="en"><head><meta charset="utf-8">
 <title>Reality FX — The University Student Experience</title>
 <style>:root { --gold: #d4af37; --gold-soft: #c9b37a; --ink: #f2ecdc; --mut: #9a937f; --line: rgba(212,175,55,.28); --bg: #0e0d0a; --panel: #16140d; --panel2: #1c1a12; }
+@page { size: A4; margin: 15mm 13mm 17mm; }
 * { box-sizing: border-box; }
 html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: Georgia, "Times New Roman", serif; font-size: 10.5pt; line-height: 1.55; }
-.page { max-width: 800px; margin: 0 auto; padding: 34px 44px 60px; }
+/* No fixed page width: the printable area is defined by the @page margins,
+   so every line and table cell flows inside the page instead of being
+   clipped at a hard 800px edge. Nothing is ever cut off to save space:
+   if content needs another page, the browser makes another page. */
+.page { max-width: none; padding: 0; }
 .masthead { border-bottom: 2px solid var(--gold); padding-bottom: 14px; margin-bottom: 26px; }
 .masthead .crown { font-size: 26px; color: var(--gold); }
 .masthead h1 { font-family: Georgia, serif; font-size: 24pt; margin: 6px 0 2px; color: var(--ink); letter-spacing: .2px; }
 .masthead .sub { font-size: 8pt; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; font-family: Arial, Helvetica, sans-serif; }
 .masthead .tagline { font-style: italic; font-size: 10pt; color: var(--gold-soft); margin-top: 6px; }
-h1 { font-size: 17pt; color: var(--gold); border-bottom: 1px solid var(--line); padding-bottom: 6px; margin: 30px 0 12px; }
-h2 { font-size: 14pt; color: var(--gold); margin: 24px 0 10px; }
-h3 { font-size: 12pt; color: var(--ink); margin: 18px 0 8px; }
-h4 { font-size: 10.5pt; color: var(--gold); margin: 14px 0 6px; }
-p { margin: 8px 0; }
+h1 { font-size: 17pt; color: var(--gold); border-bottom: 1px solid var(--line); padding-bottom: 6px; margin: 30px 0 12px; page-break-after: avoid; break-after: avoid; }
+h2 { font-size: 14pt; color: var(--gold); margin: 24px 0 10px; page-break-after: avoid; break-after: avoid; }
+h3 { font-size: 12pt; color: var(--ink); margin: 18px 0 8px; page-break-after: avoid; break-after: avoid; }
+h4 { font-size: 10.5pt; color: var(--gold); margin: 14px 0 6px; page-break-after: avoid; break-after: avoid; }
+p { margin: 8px 0; overflow-wrap: anywhere; }
 strong { color: #fff; }
 em { color: inherit; }
-code { font-family: Consolas, "Courier New", monospace; font-size: 9pt; background: #1c1a12; border: 1px solid rgba(212,175,55,.3); border-radius: 3px; padding: 0 3px; color: #e8d79a; }
-pre { background: #12100a; border: 1px solid rgba(212,175,55,.3); border-radius: 6px; padding: 10px 12px; overflow-x: auto; font-family: Consolas, monospace; font-size: 8.5pt; color: #e8d79a; }
+code { font-family: Consolas, "Courier New", monospace; font-size: 9pt; background: #1c1a12; border: 1px solid rgba(212,175,55,.3); border-radius: 3px; padding: 0 3px; color: #e8d79a; overflow-wrap: anywhere; }
+pre { background: #12100a; border: 1px solid rgba(212,175,55,.3); border-radius: 6px; padding: 10px 12px; white-space: pre-wrap; overflow-wrap: anywhere; page-break-inside: avoid; break-inside: avoid; font-family: Consolas, monospace; font-size: 8.5pt; color: #e8d79a; }
 ul, ol { margin: 8px 0; padding-left: 22px; }
-li { margin: 4px 0; }
+li { margin: 4px 0; overflow-wrap: anywhere; }
 li > ul, li > ol { margin: 2px 0; }
 table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 9.5pt; }
+tr { page-break-inside: avoid; break-inside: avoid; }
+td, th { overflow-wrap: break-word; }
 th { background: var(--panel2); color: var(--gold); text-align: left; font-weight: bold; }
 th, td { border: 1px solid var(--line); padding: 6px 9px; vertical-align: top; }
-blockquote { margin: 12px 0; padding: 10px 16px; border-left: 3px solid var(--gold); background: var(--panel); font-style: italic; color: #cfc7ae; }
+blockquote { margin: 12px 0; padding: 10px 16px; border-left: 3px solid var(--gold); background: var(--panel); font-style: italic; color: #cfc7ae; page-break-inside: avoid; break-inside: avoid; overflow-wrap: anywhere; }
 blockquote p { margin: 4px 0; }
 hr { border: 0; border-top: 1px solid var(--line); margin: 22px 0; }
-.footer { position: fixed; bottom: 0; left: 0; right: 0; border-top: 1px solid var(--line); background: var(--bg); font-size: 8pt; color: var(--mut); text-align: center; padding: 6px 0; font-family: Arial, Helvetica, sans-serif; letter-spacing: 1px; }
+.footer { margin-top: 40px; border-top: 1px solid var(--line); padding-top: 10px; font-size: 8pt; color: var(--mut); text-align: center; font-family: Arial, Helvetica, sans-serif; letter-spacing: 1px; page-break-inside: avoid; break-inside: avoid; }
 .footer .gold { color: var(--gold); }
 </style></head>
 <body>
