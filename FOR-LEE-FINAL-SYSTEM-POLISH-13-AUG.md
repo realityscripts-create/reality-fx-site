@@ -1099,4 +1099,32 @@ the watchdog (a restart can never silently kill the lock again), the OS
 heartbeat polls it, and the locked-card countdown renders. Audit ALL GREEN
 across all 18 sections.
 
+## 38. A real workshop: the Moving Averages workbench + drill rewards · 15 Aug 2026
+
+**The workshops finally FEEL like workshops — build it, tune it, break it.**
+New 7th workshop: **The Moving Averages Workshop**, built around a live
+workbench — a seeded synthetic market (the same market for every student)
+with fast/slow SMA sliders, golden/death cross markers drawn on the chart, a
+crossover sim scoring trades, P/L and win rate on every change, and five
+presets: Classic 10/30, Whipsaw 2/5, Lag 5/120, Inverted 45/10, Smooth
+20/50. The machine names what the student's tuning just did — "inverted,
+your fast line is slower than your slow line", "whipsaw machine, both lines
+chase every wiggle", "lag — signals fire near the end of the move" — so
+breaking it IS the lesson. Verified live: whipsaw jumps to 7 crosses vs 2
+healthy, inverted flips the same market to −3%, lag kills the signals
+altogether. Sim P/L is simple non-compounding return so the number stays
+honest at every setting.
+
+**Drill rewards.** The 1% drill and the workbench each grant **+5 XP** the
+first time the skill actually lands — correct arithmetic / a healthy MA
+configuration — once per student, preserved through workshop completion
+(the submit path now keeps the drill flag). Workshops are now seven: Risk,
+Psychology, Structure, Journal, Prop, Exam-Prep, Moving Averages.
+
+**Guide updated** — the exam card calls the Final Examination the Journey's
+capstone (the final node after Chapter 13) and the workshops card describes
+the build-tune-break wing. OS v75, audit ALL GREEN, and the live audit
+status page reports all 18 sections green straight from the OS server's own
+`/os/api/audit`.
+
 — Zorro (System B), 15 August 2026
