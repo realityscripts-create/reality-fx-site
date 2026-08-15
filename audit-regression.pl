@@ -576,6 +576,35 @@ print "\n[19] Workshops & drills rail — 7 workshops, both drills, XP rewards, 
     # The MA workbench lives in the Laboratory too
     ok($os =~ /labMaSandbox\(\)/ && $os =~ /MA Strategy Workbench/ ? "MA workbench is a permanent Laboratory tool (labMaSandbox)" : fail("MA workbench not in the Laboratory"));
     ok($os =~ /addXp\(5/ && $os =~ /addXp\(25/ ? "drill rewards (+5) and workshop completion (+25) XP wired" : fail("XP reward rails missing"));
+    # The workbench's own wiring: the breakout preset, its verify path, and
+    # the lab variant must all survive — a workbench that renders but can't
+    # be sized or broken is a workshop that reads as a lecture.
+    my @wmiss;
+    push @wmiss, "breakout trigger" unless $os =~ /maBreak\$\{suf\}/ && $os =~ /data-ma-break/;
+    push @wmiss, "breakout facts"    unless $os =~ /ma-bo-facts/ && $os =~ /Account: <b>/;
+    push @wmiss, "verify button"     unless $os =~ /maBoVerify\$\{suf\}/ && $os =~ /Verify my size/;
+    push @wmiss, "lab suffix wiring" unless $os =~ /wireMaDrill\(c, \"-lab\"\)/ && $os =~ /maDrillHTML\(\"-lab\"\)/;
+    push @wmiss, "seeded market"     unless $os =~ /maSeries\(20260815\)/;
+    ok(!@wmiss ? "workbench fully wired: breakout trigger + facts + verify + lab suffix + seeded market" : fail("workbench wiring missing: " . join(", ", @wmiss)));
+}
+
+# ---------- 20. ICON TRIPWIRE (an unknown icon must never print "undefined") ----------
+# The brain/download/scale bugs all shared one root: a template referenced an
+# ICONS key that didn't exist, and the page printed the literal string
+# "undefined". Static references are checked here at audit time; dynamic
+# lookups are covered by the ic() safety net inside the OS (unknown keys
+# fall back to a neutral mark instead of text).
+sec(20);
+print "\n[20] Icon tripwire — every ICONS reference resolves, dynamic lookups safe\n";
+{
+    open my $fh, "<", "$OS/js/os.js" or die;
+    local $/; my $os = <$fh>; close $fh;
+    my %def; $def{$1}++ while $os =~ /^\s*([a-zA-Z0-9_]+):\s*ICON\(/gm;
+    my %used; $used{$1}++ while $os =~ /\bICONS\.([a-zA-Z0-9_]+)/g;
+    my @missing = sort grep { !$def{$_} } keys %used;
+    ok(!@missing ? "every ICONS.<key> reference resolves (" . scalar(keys %used) . " used / " . scalar(keys %def) . " defined)" : fail("ICONS keys used but not defined: " . join(", ", @missing)));
+    ok($os =~ /const ic = key => ICONS\[key\] \|\| ICONS\.sparkle/ ? "dynamic lookups safe: unknown keys fall back to the sparkle mark, never 'undefined'" : fail("ic() safety net missing — a data-driven icon key could print 'undefined'"));
+    ok($os =~ /\bICONS\[[^]]+\]/ ? "dynamic ICONS[] lookups present (all routed through the ic() fallback where user-facing)" : fail("no dynamic icon lookups to guard"));
 }
 
 # ---------- 17. LIVE PWA PROBE (the deployed site really carries the app) ----------
@@ -634,6 +663,7 @@ if ($ENV{AUDIT_JSON}) {
       16 => [ "Data-rights rail",         "profile Privacy panel -> /api/data-requests (GET+POST), DR- ref receipt, receipt email wired" ],
       18 => [ "The gate rail",             "fork answers /api/gate off the loginAttempts throttle record; 8125 in start-demo + watchdog; OS heartbeat polls it" ],
       19 => [ "Workshops & drills rail",   "7 workshops, 1% + MA workbench drills, breakout sizing, XP rewards, MA sandbox in the Lab" ],
+      20 => [ "Icon tripwire",              "every ICONS reference resolves; unknown keys fall back to a neutral mark, never 'undefined'" ],
     );
     $meta{17} = [ "Live PWA probe (LIVE_PROBE=1)", "deployed site serves the manifest, sw scope header, install guide, matching stamp" ] if $ENV{LIVE_PROBE};
     for my $n (sort { $a <=> $b } keys %meta) {

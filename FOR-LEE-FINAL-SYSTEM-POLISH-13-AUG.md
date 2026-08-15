@@ -1182,4 +1182,21 @@ every return link on the spot.
 7 workshops, both drills, the breakout sizing, the XP rewards, and the Lab
 sandbox. Audit ALL GREEN across all 19 sections. OS v77, committed and pushed.
 
+## 41. Undefined sweep + icon tripwire + the certificate · OS v78 · 15 Aug 2026
+
+**Undefined sweep OS-wide.** Every `ICONS.<key>` reference in the OS resolves
+against the icon table (39 used / 43 defined). The remaining DYNAMIC lookups
+(nudge cards, rank cards) now go through an `ic()` safety net — an unknown
+key falls back to a neutral mark instead of printing the literal string
+"undefined". Route-by-route live sweep: zero "undefined" anywhere.
+
+**Audit section 20 (new).** The icon tripwire — a future missing icon key
+fails the audit at deploy time, and the workbench wiring (breakout trigger,
+facts, verify, lab suffix, seeded market) is guarded inside section 19.
+Audit ALL GREEN across all 20 sections.
+
+**The certificate, delivered.** A print-perfect A4-landscape certificate PDF
+is on the founder's Desktop (`RFX-CERTIFICATE-Leeroy-Chirwa.pdf`) — full-bleed
+dark, gold on black, all text verified. Inspect it and send your touch-ups.
+
 — Zorro (System B), 15 August 2026
