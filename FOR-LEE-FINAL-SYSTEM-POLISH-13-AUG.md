@@ -1156,4 +1156,30 @@ in Chromium). All three PDFs rebuilt and verified: page corners now RGB
 14,13,10 (the RFX dark) instead of 255,255,255, on body pages AND covers.
 Delivered to both Desktops. Recipe updated with the rule.
 
+## 40. Finalizing round — OS v77 · 15 Aug 2026
+
+**Certificate = trophy.** The certificate room now sits in a glass case — a
+subtle panel with a soft gold halo and two thin illuminated lines travelling
+the border (restrained, on-theme; the certificate itself untouched).
+
+**MA workbench: breakout drill + a permanent home in the Lab.** The workbench
+now includes the sizing drill every student asks about: a live cross signal,
+account + entry + stop distance, and the machine asks HOW MANY units keeps
+risk at exactly 1% — verified arithmetic, +5 XP first correct. The same
+workbench is now a permanent Laboratory tool (MA Strategy Workbench), so the
+Lab isn't just arithmetic — it's a whole strategy sandbox.
+
+**System integrity self-check** sits on its own line with the verdict below
+it — no more kissing the panel text above.
+
+**Stale academy link, killed at the root.** The OS→member-panel return link
+used to stay pointing at an older server copy; a hard refresh didn't help
+because the base was cached. Now a "stale" health verdict triggers discovery
+— the OS finds the freshest server holding the student's record and re-points
+every return link on the spot.
+
+**Audit section 19 (new).** The workshops & drills rail is now guarded: all
+7 workshops, both drills, the breakout sizing, the XP rewards, and the Lab
+sandbox. Audit ALL GREEN across all 19 sections. OS v77, committed and pushed.
+
 — Zorro (System B), 15 August 2026

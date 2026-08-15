@@ -548,6 +548,36 @@ print "\n[18] The gate rail — fork answers /api/gate, 8125 survives restarts, 
     ok($os =~ /locked/ && $os =~ /minutesLeft/ ? "OS renders the locked card with the countdown" : fail("OS locked-card rendering missing"));
 }
 
+# ---------- 19. WORKSHOPS & DRILLS RAIL (the hands-on wing stays wired) ----------
+# The workshops are the practical heart of the OS: seven sessions, two live
+# drills (the 1% rule + the MA workbench with its breakout sizing drill),
+# and the +5 XP mastery rewards. Any one of them silently unwiring would
+# leave students reading theory they can no longer practice — this section
+# guards the whole wing: the roster, the drill hooks, the XP rewards, and
+# the MA workbench's permanent home in the Laboratory.
+sec(19);
+print "\n[19] Workshops & drills rail — 7 workshops, both drills, XP rewards, lab sandbox\n";
+{
+    open my $fh, "<", "$OS/js/os.js" or die;
+    local $/; my $os = <$fh>; close $fh;
+    my @ids = qw(risk psychology structure journal prop examprep movingavg);
+    my @miss = grep { $os !~ /id: \"$_\",/ } @ids;
+    ok(!@miss ? "all 7 workshops in the roster (" . join(", ", @ids) . ")" : fail("workshops missing: " . join(", ", @miss)));
+    ok($os =~ /WORKSHOPS\.length/ ? "workshop hub counts the roster live" : fail("workshop hub does not render from the roster"));
+    # The two drills and their XP rewards
+    my @dmiss;
+    push @dmiss, "1% drill html"   unless $os =~ /id=\"dr-guess\"/ && $os =~ /id=\"dr-verify-result\"/;
+    push @dmiss, "1% drill verify" unless $os =~ /drVfy = \(\) =>/ && $os =~ /1% drill: arithmetic proven/;
+    push @dmiss, "MA workbench"    unless $os =~ /maDrillHTML\(/ && $os =~ /wireMaDrill\(/;
+    push @dmiss, "breakout drill"  unless $os =~ /maBreak/ && $os =~ /Breakout drill: sized the 1% position correctly/;
+    push @dmiss, "healthy-config XP" unless $os =~ /found a healthy configuration/;
+    push @dmiss, "submit keeps drill flag" unless $os =~ /drill: !!prev\.drill/;
+    ok(!@dmiss ? "both drills wired: 1% verify + MA workbench with breakout sizing + XP rewards" : fail("drill wiring missing: " . join(", ", @dmiss)));
+    # The MA workbench lives in the Laboratory too
+    ok($os =~ /labMaSandbox\(\)/ && $os =~ /MA Strategy Workbench/ ? "MA workbench is a permanent Laboratory tool (labMaSandbox)" : fail("MA workbench not in the Laboratory"));
+    ok($os =~ /addXp\(5/ && $os =~ /addXp\(25/ ? "drill rewards (+5) and workshop completion (+25) XP wired" : fail("XP reward rails missing"));
+}
+
 # ---------- 17. LIVE PWA PROBE (the deployed site really carries the app) ----------
 # Gated by LIVE_PROBE=1 on purpose: verifying the LIVE site is a status
 # report, not a deploy gate — the first deploy after a bump would otherwise
@@ -603,6 +633,7 @@ if ($ENV{AUDIT_JSON}) {
       15 => [ "PWA + deploy rails",        "deploy stages rfx-pwa + _headers; manifest/sw match the root layout; OS shell wired" ],
       16 => [ "Data-rights rail",         "profile Privacy panel -> /api/data-requests (GET+POST), DR- ref receipt, receipt email wired" ],
       18 => [ "The gate rail",             "fork answers /api/gate off the loginAttempts throttle record; 8125 in start-demo + watchdog; OS heartbeat polls it" ],
+      19 => [ "Workshops & drills rail",   "7 workshops, 1% + MA workbench drills, breakout sizing, XP rewards, MA sandbox in the Lab" ],
     );
     $meta{17} = [ "Live PWA probe (LIVE_PROBE=1)", "deployed site serves the manifest, sw scope header, install guide, matching stamp" ] if $ENV{LIVE_PROBE};
     for my $n (sort { $a <=> $b } keys %meta) {
