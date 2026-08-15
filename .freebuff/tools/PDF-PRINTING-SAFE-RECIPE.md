@@ -110,6 +110,22 @@ edge-fade mask so it melts into the cover's black. Rebuild flow unchanged
 render: replace `.freebuff/tools/crown-src.png` and rerun the three
 make-cover + print commands — nothing else changes.
 
+**15 Aug 2026 (final, the "crown top cut off" bug) — two root causes, both
+killed.** The founder reported the crown's top was cut on the delivered
+covers. Root cause one: the crop itself — the earlier bbox (y 488..873)
+started BELOW the peak spheres (which begin ~420), so the crop sliced the
+peaks off the image. Fixed by re-profiling the concept row-by-row (top text
+ends ~380, peak balls begin ~420, body to ~785, rim to ~785) and cropping
+x 194..870, y 390..825 → 676x435 with 30px of headroom above the spheres
+(recipe: `crop-crown-final3.ps1`, kept in C:/tmp). Root cause two: the
+radial edge-fade mask on `.cover-crown img` — `radial-gradient(ellipse
+68% 62% at 50% 50%, #000 55%, transparent 88%)` fades the top ~69px of a
+435px image to transparent, which is EXACTLY where the peak spheres sit. The
+mask is REMOVED (the crop carries its own dark margins, so it melts into the
+cover's black without a fade). Verified: all three covers re-printed
+13/9/7, crown pixel-checked on page 1 of each PDF, peaks + spheres fully
+visible. Rebuild flow unchanged.
+
 ## Why the PDFs are good
 
 PDFs are produced by valid runs (now 12/8/6 pages, A4, verified) and the

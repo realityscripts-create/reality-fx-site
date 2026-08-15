@@ -1056,4 +1056,47 @@ Purged from local history with filter-branch + gc: pack dropped 517MB →
 `C:/tmp/rfx-outer-backup.bundle`. Ready for one `git remote add origin` +
 `git push` — the founder does the GitHub-side steps (create repo, push).
 
+## 37. Crown-top cut-off killed, Final Exam becomes the journey's capstone,
+1% Risk Checker + workshop drill, gate guarded in the audit · 15 Aug 2026
+
+**The crown top was being cut off in the delivered PDFs — two root causes,
+both killed.** (1) The crop itself: the earlier bbox started BELOW the
+peak spheres (which begin ~420 of the concept's 1470px height), so the crop
+sliced the peaks off. Re-profiled the concept row-by-row and re-cropped
+x 194..870, y 390..825 → 676x435 with 30px headroom above the spheres.
+(2) The radial edge-fade mask on `.cover-crown img` — its ellipse faded
+the top ~69px of a 435px image to transparent, which is exactly where the
+peak spheres sit. Mask removed (the crop carries dark margins of its own).
+All three PDFs rebuilt and re-verified: 13/9/7 pages, crown pixel-checked
+on every cover, peaks + spheres fully visible. Delivered to both Desktops
+and refreshed the `.freebuff/tools` copies (the stale crownless ones).
+
+**The Final Examination is now the Journey's capstone.** Reasoning: the
+exam is the certificate's last door — it belongs at the END of the linear
+journey, not as a parallel room. The Journey now draws a 14th node after
+Chapter 13 — the capstone — locked until every chapter passes, then
+"Begin the Final Examination", then "Passed · best %". The exam room still
+exists (the node links to it; the nav keeps it reachable). Crucially, the
+certificate gate was found to be too loose: it unlocked at 100% chapters
+WITHOUT the exam. Now the certificate is gated on chapters AND the exam
+pass — a 100%-but-no-exam student is sent to the exam, and the dashboard
+CTA leads there first too. Verified live end to end (locked → open →
+begin → pass → certificate renders with "Final Examination: passed").
+
+**The 1% Risk Checker + the workshop drill.** The question students ask
+most — "how do I know a trade is 1%?" — now has a machine answer. The
+Laboratory leads with a **1% Risk Checker** (account size, position size,
+entry, stop, target, direction → exact money at risk, % of account, verdict
+inside/over the 1% rule, reward:risk, and the max size that stays inside).
+The **Risk Workshop** gained a hands-on 1% drill: the student builds a
+trade and the machine judges it live, then must compute the money at risk
+themselves and verify their own arithmetic before the quiz. Workshops stay
+practical — this adds doing, not more questions.
+
+**The gate is guarded in the audit.** New section 18 — the fork server
+answers `/api/gate` off the throttle record, 8125 is in start-demo.sh AND
+the watchdog (a restart can never silently kill the lock again), the OS
+heartbeat polls it, and the locked-card countdown renders. Audit ALL GREEN
+across all 18 sections.
+
 — Zorro (System B), 15 August 2026

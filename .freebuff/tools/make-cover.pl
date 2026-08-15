@@ -43,7 +43,9 @@ my $cover_css = <<'COVER';
 .cover-inner { position: relative; text-align: center; padding: 0 22mm; }
 .cover-brand { font-family: Arial, Helvetica, sans-serif; font-size: 8.5pt; letter-spacing: 7px; color: var(--gold); text-transform: uppercase; margin-bottom: 13mm; }
 .cover-crown { width: 118mm; margin: 0 auto 8mm; line-height: 0; }
-.cover-crown img { width: 100%; height: auto; display: block; -webkit-mask-image: radial-gradient(ellipse 68% 62% at 50% 50%, #000 55%, transparent 88%); mask-image: radial-gradient(ellipse 68% 62% at 50% 50%, #000 55%, transparent 88%); }
+.cover-crown img { width: 100%; height: auto; display: block; }
+/* no mask — the crop already carries dark margins, and the radial mask used to
+   fade exactly the top of the peak spheres (the "cut-off crown" bug) */
 .cover-rule { position: relative; width: 62mm; height: 1px; margin: 9mm auto; background: linear-gradient(90deg, rgba(212,175,55,0), rgba(212,175,55,.75), rgba(212,175,55,0)); }
 .cover-rule .cover-orn { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); background: #0d0b08; padding: 0 5px; color: var(--gold); font-size: 8.5pt; line-height: 1; }
 .cover-title { font-family: Georgia, serif; font-size: 25pt; font-weight: 700; color: var(--ink); margin: 0; letter-spacing: .3px; line-height: 1.22; }

@@ -518,6 +518,36 @@ print "\n[16] Data-rights rail — the student's copy/deletion request, end to e
     ok(!$leak ? "data-request payload carries only name, email, studentId (data minimisation)" : fail("data-request payload collects more than name/email/studentId"));
 }
 
+# ---------- 18. THE GATE RAIL (the security lock on the front door) ----------
+# The device-trust gate answers /api/gate off System A's real loginAttempts
+# throttle record, and 8125 is now part of the demo stack (start-demo.sh +
+# watchdog) so a machine restart can never silently kill the lock again.
+# This section guards the whole rail: the fork route, the store scan it
+# reads, the scripts that keep 8125 alive, and the OS heartbeat that polls it.
+sec(18);
+print "\n[18] The gate rail — fork answers /api/gate, 8125 survives restarts, OS reads it\n";
+{
+    open my $fh, "<", ".freebuff/tools/system-a-fork-server.pl" or fail("system-a-fork-server.pl missing") and return;
+    local $/; my $fork = <$fh>; close $fh;
+    my @gmiss;
+    push @gmiss, "GET /api/gate route" unless $fork =~ /GET' && \$clean eq '\/api\/gate'/ || $fork =~ /GET.*\/api\/gate/;
+    push @gmiss, "loginAttempts scan"  unless $fork =~ /loginAttempts/;
+    push @gmiss, "locked:false answer" unless $fork =~ /locked => JSON::PP::false/;
+    push @gmiss, "locked:true answer"  unless $fork =~ /locked => JSON::PP::true/;
+    push @gmiss, "minutesLeft field"   unless $fork =~ /minutesLeft/;
+    ok(!@gmiss ? "fork server answers /api/gate off the throttle record (locked:false + locked:true + minutesLeft)" : fail("gate fork missing: " . join(", ", @gmiss)));
+    open my $sh, "<", ".freebuff/tools/start-demo.sh" or fail("start-demo.sh missing") and return;
+    local $/; my $start = <$sh>; close $sh;
+    ok($start =~ /8125/ ? "start-demo.sh brings 8125 up with the other servers" : fail("8125 not in start-demo.sh — a restart silently kills the gate"));
+    open my $wh, "<", ".freebuff/tools/watchdog.sh" or fail("watchdog.sh missing") and return;
+    local $/; my $wd = <$wh>; close $wh;
+    ok($wd =~ /8125/ ? "watchdog revives 8125 after a crash" : fail("8125 not in watchdog.sh — the gate dies alone"));
+    open my $oh, "<", "$OS/js/os.js" or die;
+    local $/; my $os = <$oh>; close $oh;
+    ok($os =~ m{/api/gate\?email=} ? "OS heartbeat polls the gate endpoint" : fail("OS heartbeat does not read /api/gate"));
+    ok($os =~ /locked/ && $os =~ /minutesLeft/ ? "OS renders the locked card with the countdown" : fail("OS locked-card rendering missing"));
+}
+
 # ---------- 17. LIVE PWA PROBE (the deployed site really carries the app) ----------
 # Gated by LIVE_PROBE=1 on purpose: verifying the LIVE site is a status
 # report, not a deploy gate — the first deploy after a bump would otherwise
@@ -572,6 +602,7 @@ if ($ENV{AUDIT_JSON}) {
       14 => [ "Pill standard + icon guard", "one 26px pill rhythm OS-wide + bare-svg 1em guard (no giant crowns)" ],
       15 => [ "PWA + deploy rails",        "deploy stages rfx-pwa + _headers; manifest/sw match the root layout; OS shell wired" ],
       16 => [ "Data-rights rail",         "profile Privacy panel -> /api/data-requests (GET+POST), DR- ref receipt, receipt email wired" ],
+      18 => [ "The gate rail",             "fork answers /api/gate off the loginAttempts throttle record; 8125 in start-demo + watchdog; OS heartbeat polls it" ],
     );
     $meta{17} = [ "Live PWA probe (LIVE_PROBE=1)", "deployed site serves the manifest, sw scope header, install guide, matching stamp" ] if $ENV{LIVE_PROBE};
     for my $n (sort { $a <=> $b } keys %meta) {
