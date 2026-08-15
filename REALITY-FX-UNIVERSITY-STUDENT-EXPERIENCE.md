@@ -8,6 +8,9 @@
 
 > **The one-sentence story:** Reality FX is an institution that teaches young people to trade the financial markets — safely, properly, and with proof — so that by the time anyone risks real money, they've already proven they can handle it.
 
+> 🗓️ **RFX University is opening soon.**
+> **Semester One begins the day the campus opens** — the exact day our live platform is restored and the doors are officially unlocked for the first cohort. Every student who registers before opening day starts Semester One on the same line, at the same lesson one, with the full journey ahead of them.
+
 ---
 
 ## PART A · THE STORY

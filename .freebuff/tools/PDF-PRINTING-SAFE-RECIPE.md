@@ -70,8 +70,19 @@ perl make-cover.pl tmp-body.html out.html "Title" "EYEBROW" "Meta"
 The cover gets `@page :first { margin: 0 }` for full bleed; the body pages
 keep the normal A4 margins, so nothing that was fixed before can regress.
 Final page counts (cover included): Master Guide 13 · Investor 9 · University
-7. Verified: page 1 is the cover (crown pixels ~4.7%, background ~90% dark),
+7. Verified: page 1 is the cover (crown pixels ~2.7%, background ~94% dark),
 body pages zero near-empty, closing band intact on the last page.
+
+**15 Aug 2026 (later) — the house crown.** The founder's feedback: the
+geometric 5-peak SVG read "cheap"; the crown the brand loves is the classic
+chess-queen silhouette (U+265B) used in every document masthead. The cover
+crown was redrawn to match it exactly: five beaded peaks (bead on ALL five
+peaks), a band with two etched wavy stripes, filled silhouette with gold
+gradient + soft glow. The cover now speaks the same crown as every body-page
+masthead — one voice, cover to cover. The University doc also gained the
+"RFX University is opening soon — Semester One begins the day the campus
+opens" callout (the opening day = the day the live platform's credits are
+restored). Rebuilt page counts stayed 13/9/7.
 
 ## Why the PDFs are good
 

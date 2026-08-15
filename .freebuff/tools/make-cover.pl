@@ -50,33 +50,38 @@ my $crown_svg = <<'CROWN';
 <svg class="cover-crown" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <defs>
     <linearGradient id="gGold" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#f6e7a5"/>
-      <stop offset="0.45" stop-color="#d4af37"/>
+      <stop offset="0" stop-color="#f8ecb4"/>
+      <stop offset="0.4" stop-color="#d4af37"/>
       <stop offset="1" stop-color="#8f6f1f"/>
     </linearGradient>
-    <linearGradient id="gBand" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ecd27a"/>
-      <stop offset="1" stop-color="#a8842a"/>
-    </linearGradient>
-    <radialGradient id="gGlow" cx="0.5" cy="0.42" r="0.6">
-      <stop offset="0" stop-color="#d4af37" stop-opacity="0.16"/>
+    <radialGradient id="gGlow" cx="0.5" cy="0.4" r="0.62">
+      <stop offset="0" stop-color="#d4af37" stop-opacity="0.18"/>
       <stop offset="1" stop-color="#d4af37" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <rect x="0" y="0" width="400" height="300" fill="url(#gGlow)"/>
-  <path d="M40 258 L40 150 Q40 144 46 146 L90 198 Q94 202 98 198 L126 122 Q128 116 134 118 L150 190 Q153 195 159 193 L200 96 Q203 90 209 93 L249 193 Q255 195 258 190 L274 118 Q280 116 282 122 L310 198 Q314 202 318 198 L362 146 Q368 144 368 150 L368 258 Z"
-        fill="url(#gGold)" stroke="#f0d98c" stroke-width="2.5" stroke-linejoin="round"/>
-  <circle cx="131" cy="107" r="8" fill="#f6e7a5" stroke="#d4af37" stroke-width="2"/>
-  <circle cx="204" cy="83" r="10.5" fill="#f6e7a5" stroke="#d4af37" stroke-width="2"/>
-  <circle cx="277" cy="107" r="8" fill="#f6e7a5" stroke="#d4af37" stroke-width="2"/>
-  <circle cx="201" cy="80" r="3.6" fill="#fff8d8"/>
-  <circle cx="129" cy="104" r="2.8" fill="#fff8d8"/>
-  <circle cx="275" cy="104" r="2.8" fill="#fff8d8"/>
-  <rect x="40" y="232" width="328" height="27" rx="7" fill="url(#gBand)"/>
-  <rect x="40" y="232" width="328" height="2.4" fill="#f0d98c" opacity="0.75"/>
-  <circle cx="92" cy="245.5" r="4.2" fill="#7a5c17"/>
-  <circle cx="200" cy="245.5" r="4.8" fill="#7a5c17"/>
-  <circle cx="308" cy="245.5" r="4.2" fill="#7a5c17"/>
+  <!-- The classic crown silhouette: five peaks, each topped with a bead,
+       flowing into the band — the exact shape of the house crown. -->
+  <path d="M40 262 L40 232 L88 232 Q78 192 96 158 Q114 192 110 232 L142 232
+           Q134 170 152 128 Q170 170 166 232 L192 232 Q196 148 200 94
+           Q204 148 208 232 L234 232 Q230 170 248 128 Q266 170 262 232
+           L290 232 Q284 192 304 158 Q322 192 312 232 L360 232 L360 262
+           Q200 275 40 262 Z"
+        fill="url(#gGold)" stroke="#f0d98c" stroke-width="1.6" stroke-linejoin="round"/>
+  <!-- beads on all five peaks -->
+  <circle cx="200" cy="86" r="10.5" fill="url(#gGold)" stroke="#f0d98c" stroke-width="1.6"/>
+  <circle cx="152" cy="120" r="8.5" fill="url(#gGold)" stroke="#f0d98c" stroke-width="1.6"/>
+  <circle cx="248" cy="120" r="8.5" fill="url(#gGold)" stroke="#f0d98c" stroke-width="1.6"/>
+  <circle cx="96" cy="150" r="7" fill="url(#gGold)" stroke="#f0d98c" stroke-width="1.6"/>
+  <circle cx="304" cy="150" r="7" fill="url(#gGold)" stroke="#f0d98c" stroke-width="1.6"/>
+  <circle cx="197" cy="82" r="3.4" fill="#fff8d8"/>
+  <circle cx="150" cy="116" r="2.7" fill="#fff8d8"/>
+  <circle cx="246" cy="116" r="2.7" fill="#fff8d8"/>
+  <circle cx="94" cy="146" r="2.2" fill="#fff8d8"/>
+  <circle cx="302" cy="146" r="2.2" fill="#fff8d8"/>
+  <!-- the two etched stripes across the band, as in the house crown -->
+  <path d="M54 240 Q120 237 200 240 Q280 243 346 240" stroke="#2e2108" stroke-width="2.6" opacity="0.55" fill="none"/>
+  <path d="M54 251 Q120 248 200 251 Q280 254 346 251" stroke="#2e2108" stroke-width="2.6" opacity="0.55" fill="none"/>
 </svg>
 CROWN
 
