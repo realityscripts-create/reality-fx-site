@@ -88,6 +88,11 @@ later; deferring costs nothing.
 ## Status
 
 - [x] PWA layer built + verified (all paths resolve in the production layout, v=65)
+- [x] Onboarding wired — the install guide is linked in three places, all derived
+      from the configured OS endpoint (`osInstallUrl()`, never hardcoded):
+      1. the **welcome email** (bridge.js, sent the moment the handshake lands)
+      2. the **registration completion screen** (register.html, under "Enter the
+         Academy")
+      3. the **member panel** access card (My RFX Account, under the Enter button)
 - [ ] PWA live-probed on `reality-fx-os.netlify.app` after next deploy
-- [ ] Onboarding email links `/rfx-pwa/install.html`
 - [ ] (optional) Capacitor APK + SHA-256 rail

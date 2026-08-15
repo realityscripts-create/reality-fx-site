@@ -221,7 +221,10 @@ window.RFX = window.RFX || {};
       '<b>Course:</b> ' + escHtml(enr.payment.course) + '<br/><b>Status:</b> <span style="color:#1d7a33;font-weight:700;">ACTIVE</span></div>' +
       '<p style="font-family:Arial,sans-serif;font-size:13px;color:#444;margin-top:18px;">Sign in to the OS with your email. You will set your password using the OS recovery flow — ' +
       'Reality FX never sends passwords in plain text.</p>' +
-      '<div style="text-align:center;margin:26px 0;"><a href="' + escHtml(osUrl) + '" style="display:inline-block;background:linear-gradient(135deg,#f0d98c,#d4af37 45%,#a8842a);color:#241a05;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;padding:14px 34px;border-radius:10px;font-size:14px;">Enter RFX OS</a></div>' +
+      '<div style="text-align:center;margin:26px 0 6px;"><a href="' + escHtml(osUrl) + '" style="display:inline-block;background:linear-gradient(135deg,#f0d98c,#d4af37 45%,#a8842a);color:#241a05;text-decoration:none;font-family:Arial,sans-serif;font-weight:700;padding:14px 34px;border-radius:10px;font-size:14px;">Enter RFX OS</a></div>' +
+      // the install guide shares the OS endpoint derivation (osInstallUrl) so
+      // it always points at the same environment — never a hardcoded machine
+      '<div style="text-align:center;margin:0 0 22px;"><a href="' + escHtml(RFX.db.osInstallUrl()) + '" style="color:#a8842a;font-family:Arial,sans-serif;font-size:12px;text-decoration:underline;">Put the Academy on your phone — Android &amp; iPhone (works offline)</a></div>' +
       '<p style="font-family:Arial,sans-serif;font-size:12px;color:#666;">Welcome to Reality FX, ' + escHtml(enr.payment.customerName) + '.</p>';
   }
 

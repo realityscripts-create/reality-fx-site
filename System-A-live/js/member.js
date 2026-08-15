@@ -929,7 +929,8 @@
         (osProbeState === 'down' ? '<span class="spanner-glow" title="The Academy is being repaired right now — our engineers are on it. Your access is safe and waiting for you. Please be patient — this is temporary.">' + (I.wrench || '') + '</span> <span class="maintenance-inline">Academy maintenance in progress</span><span class="os-power-tag">' + (I.power || '') + ' power is out</span>'
           : (osProbeState === 'up' ? 'The Academy is online and waiting for you.'
             : 'Checking the Academy link…')) + '</span></div>' +
-        '<a class="btn btn-gold" id="os-enter-btn" href="' + osUrl + '" target="_blank" style="width:100%;">' + (I.unlock || '') + ' Enter the Academy</a></div>';
+        '<a class="btn btn-gold" id="os-enter-btn" href="' + osUrl + '" target="_blank" style="width:100%;">' + (I.unlock || '') + ' Enter the Academy</a>' +
+        '<a class="btn btn-ghost btn-sm" href="' + db.osInstallUrl() + '" target="_blank" style="margin-top:8px;">' + (I.smartphone || '') + ' Get the Academy app — works on any phone</a></div>';
     } else if (enr.state === 'APPROVED') {
       body = '<div class="access-locked"><span class="ic">' + (I.lock || '') + '</span>' +
         '<span>Approved. RFX OS unlocks the moment the handshake confirms — usually seconds. Check back shortly.</span></div>';

@@ -647,9 +647,11 @@
     const I = RFX.icons || {};
     const enter = $('ap-enter');
     const lockMsg = $('ap-lock-msg');
+    const install = $('ap-install');
     if (enter) {
       enter.href = db.osIndexUrl() + '?sid=' + encodeURIComponent(enr.studentId || '');
     }
+    if (install) install.href = db.osInstallUrl();
     if (enr.state === 'ACTIVE' || enr.state === 'RFX_OS_CONFIRMED') {
       enter.style.display = 'inline-flex';
       if (lockMsg) lockMsg.hidden = true;

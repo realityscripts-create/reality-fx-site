@@ -886,6 +886,14 @@ window.RFX = window.RFX || {};
     if (/\.html?($|[?#])/.test(ep)) return ep;          // already a page URL
     return ep + '/index.html';
   }
+  /* The app install guide: same derivation as osIndexUrl, then swap the page
+     for the PWA install page. The PWA installs on Android AND iPhone (Safari
+     → Add to Home Screen) — no app store, no platform lock-in. */
+  function osInstallUrl() {
+    let u = osIndexUrl();
+    u = u.replace(/\/index\.html$/, '').replace(/\/+$/, '');
+    return u + '/rfx-pwa/install.html';
+  }
   function updateSettings(patch) {
     state = Object.assign({}, state, patch);
     save();
@@ -5201,7 +5209,7 @@ window.RFX = window.RFX || {};
     // meta
     now, money, fmtDate, fmtDateShort, IDEMPOTENCY_KEY_FIELD,
     // settings
-    getSettings, osIndexUrl, updateSettings, getCatalog, saveCatalog,
+    getSettings, osIndexUrl, osInstallUrl, updateSettings, getCatalog, saveCatalog,
     // OS integrity-flag rail (moderator's review queue)
     osFlagsServer, listOsFlags, resolveOsFlag, identityFlags,
     // emails
