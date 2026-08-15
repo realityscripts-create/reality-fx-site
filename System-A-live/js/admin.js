@@ -725,6 +725,35 @@
       .then(r => { if (r.ok) { renderPii(); ui.toastOk('Incident board cleared.'); } })
       .catch(() => ui.toastErr('Could not reach the OS rail to clear the board.'));
   });
+  /* Data-requests board — students exercising their rights from the OS
+     profile room (copy of data / account deletion). Same rail pattern as
+     the PII board: fetched on demand, never on the 3s refresh. */
+  function renderDataRequests() {
+    const el = document.getElementById('sec-dreq');
+    const cnt = document.getElementById('dreq-count');
+    if (!el) return;
+    el.innerHTML = '<li><span class="a-time">—</span><span class="a-txt faint">Checking the OS rail…</span></li>';
+    const tryRail = (base) => fetch(base + '/data-requests', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status));
+    const localRail = 'http://127.0.0.1:49270/os/api';
+    const primary = osApiBase() === localRail ? localRail : osApiBase();
+    tryRail(primary).catch(() => primary === localRail ? Promise.reject() : tryRail(localRail))
+      .then(j => {
+        const reqs = j.requests || [];
+        if (cnt) cnt.textContent = reqs.length ? reqs.length + ' request' + (reqs.length === 1 ? '' : 's') : 'no requests yet';
+        el.innerHTML = (reqs.length ? reqs.slice(0, 24).map(x =>
+          '<li><span class="a-time">' + (new Date(x.at * 1000).toLocaleString().slice(0, 17)) + '</span>' +
+          '<span class="a-txt"><b>' + ui.esc(x.ref) + '</b> <span class="pill" style="font-size:8px;background:rgba(212,175,55,.16);color:var(--gold);">' + (x.kind === 'delete' ? 'DELETION' : 'DATA COPY') + '</span> · ' + ui.esc(x.name) + (x.email ? ' · ' + ui.esc(x.email) : '') + (x.studentId ? ' · <b>' + ui.esc(x.studentId) + '</b>' : '') +
+          '<div class="small faint" style="margin-top:2px;">' + ui.esc(x.note || '') + '</div></span></li>').join('')
+          : '<li><span class="a-time">—</span><span class="a-txt faint">No data requests filed — the rights rail is quiet.</span></li>');
+      })
+      .catch(() => {
+        if (cnt) cnt.textContent = '';
+        el.innerHTML = '<li><span class="a-time">—</span><span class="a-txt faint">OS rail unreachable right now — requests filed while offline are stored on the student\'s device and will sync when the rail returns.</span></li>';
+      });
+  }
+  const dreqRefresh = document.getElementById('dreq-refresh');
+  if (dreqRefresh) dreqRefresh.addEventListener('click', renderDataRequests);
   function doSelfTest() {
     const results = db.securitySelfTest();
     const el = document.getElementById('sec-selftest-results');
@@ -780,9 +809,10 @@
     kpis(); funnel(); renderList(); pipelineDemo(); footState(); mailCount(); renderSecurity(); renderStorage();
   }
 
-  // the PII incident board loads once on boot + on demand (Refresh/Clear) —
-  // never on the 3s renderAll, so the OS rail isn't polled every few seconds.
+  // the PII incident board + data-requests board load once on boot + on demand
+  // (Refresh) — never on the 3s renderAll, so the OS rail isn't polled.
   setTimeout(() => { try { renderPii(); } catch (e) { /* rail unavailable */ } }, 600);
+  setTimeout(() => { try { renderDataRequests(); } catch (e) { /* rail unavailable */ } }, 700);
 
   /* ================= RFX coupons (the golden ticket) =================
      Staff mints coupon codes for people who deserve them (partners,

@@ -942,3 +942,33 @@ broken that a deploy wouldn't fix; `bash deploy-live.sh` remains the single
 command the moment credits land.
 
 — Zorro (System B), 15 August 2026
+
+---
+
+## §32 · The data-rights rail + crown covers — 15 Aug 2026
+
+**"Request my data / Delete my account" is now a real action in the OS.**
+My Profile gained a *Privacy & your data* panel: a student can request a
+copy of their data or an account deletion. The request is filed to a new
+`/api/data-requests` rail (local server + the production function) with a
+reference number (`DR-xxxx`) as the receipt, and the Staff Console now has a
+**Data-requests board** right under the PII board showing every request —
+who, what kind, when, status. Verified end-to-end live: a real click from
+the OS profile room filed `DR-2781-3930` for the signed-in student and the
+board read it back. This is what makes the Play Data Safety deletion claim
+true *today*, not on submission day. v=68, OS pushed (`2a270ea`).
+
+**The PDFs grew a crown cover.** `make-cover.pl` prepends a full-bleed A4
+cover to each of the three documents: a big gold crown (hand-drawn SVG,
+gradient + orbs + band), double-line gold frame, brand line, title, eyebrow,
+tagline and version/date — all in the black & gold house language. The cover
+prints full-bleed (`@page :first { margin: 0 }`) while the body keeps the
+fixed A4 margins, so nothing that was fixed in §31 can regress. Final
+counts: Master Guide 13 · Investor 9 · University 7 pages. Verified: crown
+pixels ~4.7% of the cover, background ~90% dark, zero near-empty body pages.
+New PDFs are on the Desktop (OneDrive).
+
+**Live site** — gate still closed; the v=68 build + covers are staged and
+waiting; `bash deploy-live.sh` remains the one command.
+
+— Zorro (System B), 15 August 2026

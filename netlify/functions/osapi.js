@@ -676,6 +676,29 @@ exports.handler = async (event) => {
     return bad("reason or action required");
   }
 
+  // The student's data-rights rail: a request for a copy or a deletion, filed
+  // from the OS profile room, lands on the same board the Staff Console reads.
+  if (method === "GET" && path === "data-requests") {
+    const rec = await blobGet("dataRequests", "data-requests");
+    return ok(rec && rec.value ? { requests: rec.value } : { requests: [] });
+  }
+  if (method === "POST" && path === "data-requests") {
+    const pl = parseBody(event);
+    const kind = pl && pl.kind === "delete" ? "delete" : pl && pl.kind === "export" ? "export" : "";
+    if (!pl || !pl.name || !kind) return bad("name and kind (export|delete) required");
+    const req = {
+      ref: "DR-" + (1000 + Math.floor(Math.random() * 9000)) + "-" + String(nowSec()).slice(-4),
+      kind, at: nowSec(),
+      name: String(pl.name || "Unknown").slice(0, 60),
+      email: String(pl.email || "").slice(0, 80),
+      studentId: String(pl.studentId || "").slice(0, 40),
+      note: String(pl.note || "").slice(0, 160),
+      status: "received",
+    };
+    await mutate("dataRequests", "data-requests", (list) => { list.unshift(req); return list.slice(0, 500); });
+    return ok({ ok: true, ref: req.ref, kind: req.kind });
+  }
+
   if (method === "GET" && path === "rooms") return getRooms();
   if (method === "POST" && path === "rooms") return postRooms(parseBody(event));
   const roomActions = ["chat", "book", "booking", "wait", "admit", "request", "presence", "end"];

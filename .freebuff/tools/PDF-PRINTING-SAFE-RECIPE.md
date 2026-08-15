@@ -55,6 +55,24 @@ full pages. The current `md2html.pl` hardens against both:
 Rebuilt page counts: Master Guide 12 · Investor 8 · University 6 (A4, all
 pages full, zero near-empty pages, verified page-by-page with pdftotext).
 
+## 15 Aug 2026 (later) — crown covers
+
+`make-cover.pl` prepends a full-bleed black & gold cover (one big gold crown
+SVG, double-line frame, brand + title + eyebrow + tagline + meta) to each
+doc. Build order per doc:
+
+```bash
+perl md2html.pl in.md tmp-body.html "Title" "EYEBROW"
+perl make-cover.pl tmp-body.html out.html "Title" "EYEBROW" "Meta"
+# then print out.html with the safe Edge command
+```
+
+The cover gets `@page :first { margin: 0 }` for full bleed; the body pages
+keep the normal A4 margins, so nothing that was fixed before can regress.
+Final page counts (cover included): Master Guide 13 · Investor 9 · University
+7. Verified: page 1 is the cover (crown pixels ~4.7%, background ~90% dark),
+body pages zero near-empty, closing band intact on the last page.
+
 ## Why the PDFs are good
 
 PDFs are produced by valid runs (now 12/8/6 pages, A4, verified) and the

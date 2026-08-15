@@ -130,7 +130,7 @@ Legend: **Collected** = the app sends/stores this. **Processed** = handled only 
 
 ## 7 · PRE-SUBMISSION CHECKLIST
 
-- [ ] Add a visible **"Request my data / Delete my account"** action in the OS Settings (today it's the support rail).
+- [x] **"Request my data / Delete my account"** is live in the OS (My Profile → Privacy & your data) — filed to the `/api/data-requests` rail with a reference number, reviewed by the Registrar, visible on the Staff Console's Data-requests board. *(Built 15 Aug 2026, v=68.)*
 - [ ] Decide the **Audio** declaration (ephemeral real-time → recommend declaring YES with "not stored").
 - [ ] One independent security review (MSA or assessor) for the "reviewed" badge.
 - [ ] Add the guardian-consent language to the store description.

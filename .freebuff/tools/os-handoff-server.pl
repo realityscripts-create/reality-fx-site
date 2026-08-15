@@ -180,6 +180,42 @@ sub log_pii_incident {
   return $inc;
 }
 
+# --- Data-request rail: the student's "my data / delete me" rights, exercised ---
+# A student requests a copy or a deletion from the OS profile room; the request
+# lands here with a reference number and the Staff Console reads it as a board.
+sub data_requests_file { my $s = $stateFile; $s =~ s/handoffs\.json$/data-requests.json/; return $s; }
+sub load_data_requests {
+  my $f = data_requests_file();
+  return [] unless -f $f;
+  open my $fh, '<:raw', $f or return [];
+  my $raw = do { local $/; <$fh> };
+  close $fh;
+  return eval { JSON::PP->new->utf8->decode($raw) } || [];
+}
+sub save_data_requests {
+  my ($d) = @_;
+  return atomic_write(data_requests_file(), JSON::PP->new->utf8->canonical->pretty->encode($d));
+}
+sub log_data_request {
+  my ($pl) = @_;
+  my $kind = ($pl->{kind} eq 'delete') ? 'delete' : 'export';
+  my $req = {
+    ref => 'DR-' . sprintf('%04d', int(rand(9000)) + 1000) . '-' . substr(time(), -4),
+    kind => $kind,
+    at => time(),
+    name => substr($pl->{name} || 'Unknown', 0, 60),
+    email => substr($pl->{email} || '', 0, 80),
+    studentId => substr($pl->{studentId} || '', 0, 40),
+    note => substr($pl->{note} || '', 0, 160),
+    status => 'received',
+  };
+  my $list = load_data_requests();
+  unshift @$list, $req;
+  if (@$list > 500) { @$list = splice(@$list, 0, 500); }
+  save_data_requests($list);
+  return $req;
+}
+
 # --- Live Rooms store (Live Studio broadcasts: mentor lessons + staff meetings) ---
 sub rooms_file { my $s = $stateFile; $s =~ s/handoffs\.json$/rooms.json/; return $s; }
 sub load_rooms {
@@ -357,6 +393,25 @@ sub serve {
       close $c; return;
     }
     resp_json($c, 400, { ok => JSON::PP::false, reason => 'reason or action required' });
+    close $c; return;
+  }
+  if ($method eq 'OPTIONS' && $clean =~ m{^/os/api/data-requests(?:/|\z)}) {
+    resp_json($c, 204, {});
+    close $c; return;
+  }
+  if ($method eq 'GET' && $clean eq '/os/api/data-requests') {
+    resp_json($c, 200, { requests => load_data_requests() });
+    close $c; return;
+  }
+  if ($method eq 'POST' && $clean eq '/os/api/data-requests') {
+    my $body = read_body($c, $clen);
+    my $pl = eval { JSON::PP->new->utf8->decode($body) };
+    if (!$pl || !$pl->{name} || !($pl->{kind} eq 'export' || $pl->{kind} eq 'delete')) {
+      resp_json($c, 400, { ok => JSON::PP::false, reason => 'name and kind (export|delete) required' });
+      close $c; return;
+    }
+    my $req = log_data_request($pl);
+    resp_json($c, 200, { ok => JSON::PP::true, ref => $req->{ref}, kind => $req->{kind} });
     close $c; return;
   }
   if ($method eq 'GET' && $clean eq '/os/api/rooms') {
