@@ -971,4 +971,31 @@ New PDFs are on the Desktop (OneDrive).
 **Live site** — gate still closed; the v=68 build + covers are staged and
 waiting; `bash deploy-live.sh` remains the one command.
 
+## 33. Data-rights receipt email + audit rail + a deploy bug caught · 15 Aug 2026
+
+**The receipt is now a real email.** Filing a data copy/deletion request from
+My Profile → Privacy & your data emails the student a branded gold-crown
+receipt with their DR- reference — "nothing is deleted instantly, you can
+change your mind" — the moment it lands on the rail. Best-effort by design:
+no Resend key → the request still files and the ref is still the receipt
+(receiptEmail: pending), never a failed request. Production sends via Resend;
+local dev returns pending, same philosophy as the demo-code rail. The OS UI
+now tells the student "a confirmation email is on its way" when it sent.
+
+**Audit section 16 — Data-rights rail** (all green): production function GET+
+POST data-requests with DR- refs + receipt email wired; local server mirrors;
+OS profile panel has both buttons + ref/email status; and a data-minimisation
+guard — the payload may only carry name, email, studentId (no phone, no
+address, no government ID). OS bumped to v=69, pushed to GitHub (9b3b7be).
+
+**Found while verifying — a real deploy bug.** deploy-live.sh staged only
+index/css/js — never `os/assets` — so a live deploy would have shipped the OS
+**without its 741 chapter slides** (the OS loads them at runtime). Fixed:
+assets now stage with every deploy, the audit's section 15 now tripwires it,
+and the drop zip is rebuilt complete: 741 slides, v=69, PWA layer, 237 MB.
+
+**Push status** — OS pushed (9b3b7be). Outer repo committed locally (f881e32);
+still no remote of its own, and the twin panel repo is ahead 2 of origin,
+waiting on Zorrothegreat-Lee's GitHub login (one `git push origin HEAD`).
+
 — Zorro (System B), 15 August 2026
