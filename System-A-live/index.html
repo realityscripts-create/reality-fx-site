@@ -24,6 +24,15 @@
       <h1 class="display"><span class="gold">Reality FX</span> Ecosystem</h1>
       <p class="quote" style="margin-top:16px;">Welcome aboard, <span class="gold">member</span>.</p>
 
+      <div class="launch-countdown" id="launch-countdown" hidden>
+        <span class="lc-ic" data-icon="grad"></span>
+        <div class="lc-body">
+          <b id="lc-title">The Academy opens soon</b>
+          <p id="lc-sub">13 chapters · three difficulty lanes · a simulated trading environment — learn before you risk. This is the better way.</p>
+        </div>
+        <a class="btn btn-gold btn-sm" id="lc-cta" href="register.html">Reserve your place →</a>
+      </div>
+
       <div class="doors">
         <a class="card door card-hover" href="member.html" data-smart="member">
           <span class="door-tag" hidden></span>
@@ -99,6 +108,36 @@
   </div>
 </div>
 
+<script>
+  /* The launch countdown — 30 September 2026. Before that date the hero
+     carries a quiet gold banner with the days remaining and a Reserve
+     CTA; on the day it flips to a green "doors open" state. Static — no
+     ticking timer, no churn. */
+  (function () {
+    var el = document.getElementById("launch-countdown");
+    if (!el) return;
+    try {
+      var launch = new Date("2026-09-30T00:00:00").getTime();
+      var days = Math.ceil((launch - Date.now()) / 86400000);
+      var title = document.getElementById("lc-title");
+      var sub = document.getElementById("lc-sub");
+      var cta = document.getElementById("lc-cta");
+      if (days > 0) {
+        title.textContent = "The Academy opens in " + days + " day" + (days === 1 ? "" : "s");
+        sub.textContent = "On 30 September 2026 the classroom opens — 13 chapters, three lanes, a simulated trading environment, practical workshops and challenges. Until then: learn before you risk.";
+        cta.textContent = "Reserve your place →";
+        cta.href = "register.html";
+      } else {
+        el.classList.add("open");
+        title.textContent = "The doors are open";
+        sub.textContent = "Reality FX — The Trading Academy is live. Learn, practise safely, prove competence — then approach the real markets.";
+        cta.textContent = "Begin registration →";
+        cta.href = "register.html";
+      }
+      el.hidden = false;
+    } catch (e) { /* static page — never break the doors */ }
+  })();
+</script>
 <script src="assets/icons.js?v=20260813-01"></script>
 <script src="js/db.js?v=20260813-01"></script>
 <script src="js/ui.js?v=20260813-01"></script>

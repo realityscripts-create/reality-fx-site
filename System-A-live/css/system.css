@@ -96,6 +96,30 @@ input, select, textarea { font-family: inherit; }
   color: var(--muted);
 }
 .quote .gold { color: var(--gold-bright); }
+/* The launch countdown band in the hero — quiet gold before 30 September
+   2026, flipping to a green "doors open" state on the day. Sits in the
+   hero flow, before the doors grid, where visitors actually see it. */
+.launch-countdown {
+  display: flex; align-items: center; gap: 16px; text-align: left;
+  max-width: 720px; margin: 26px auto 6px;
+  border: 1px solid rgba(212, 175, 55, .4); border-radius: 14px;
+  padding: 16px 20px;
+  background: linear-gradient(120deg, rgba(212, 175, 55, .12), rgba(212, 175, 55, .03));
+}
+.launch-countdown.open {
+  border-color: rgba(126, 226, 164, .4);
+  background: linear-gradient(120deg, rgba(126, 226, 164, .10), rgba(126, 226, 164, .03));
+}
+.launch-countdown .lc-ic { color: var(--gold-bright); flex-shrink: 0; }
+.launch-countdown .lc-ic svg { width: 28px; height: 28px; }
+.launch-countdown .lc-body { flex: 1; }
+.launch-countdown .lc-body b {
+  font-family: var(--font-serif); letter-spacing: 1.5px;
+  color: var(--gold-bright); font-size: 14px;
+}
+.launch-countdown.open .lc-body b { color: #9fe3bd; }
+.launch-countdown .lc-body p { margin: 4px 0 0; font-size: 13px; color: var(--muted); line-height: 1.55; }
+.launch-countdown .btn { flex-shrink: 0; text-decoration: none; }
 .small { font-size: 12px; color: var(--muted); }
 .faint { color: var(--faint); }
 .serif { font-family: var(--font-serif); }
