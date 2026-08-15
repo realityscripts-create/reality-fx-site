@@ -106,5 +106,24 @@ echo "  live stamp:  $STAMP"
 curl -s -o /dev/null -w "  /               → %{http_code}\n" "$LIVE/"
 curl -s -o /dev/null -w "  /os/api/handoffs → %{http_code}\n" "$LIVE/os/api/handoffs"
 curl -s -o /dev/null -w "  /api/flags       → %{http_code}\n" "$LIVE/api/flags"
+# the PWA rail must be live too — manifest, the worker's site-wide scope
+# header (without it the install is blocked), and the install guide. Retries
+# absorb the few seconds of CDN propagation after the upload.
 echo ""
-echo "✅ DONE — one command, whole building walked, live site updated."
+echo "[5/5] Verifying the PWA layer is live"
+MANIFEST_CODE=$(curl -s --retry 4 --retry-delay 3 --retry-all-errors -o /dev/null -w "%{http_code}" "$LIVE/rfx-pwa/manifest.json")
+echo "  /rfx-pwa/manifest.json → $MANIFEST_CODE"
+SW_HEADER=$(curl -s --retry 4 --retry-delay 3 --retry-all-errors -m 12 -D - -o /dev/null "$LIVE/rfx-pwa/sw.js" | grep -i "service-worker-allowed" | tr -d '\r' || echo "MISSING")
+echo "  /rfx-pwa/sw.js         → $SW_HEADER"
+INSTALL_CODE=$(curl -s --retry 4 --retry-delay 3 --retry-all-errors -o /dev/null -w "%{http_code}" "$LIVE/rfx-pwa/install.html")
+echo "  /rfx-pwa/install.html  → $INSTALL_CODE"
+if [ "$MANIFEST_CODE" != "200" ] || [ "$INSTALL_CODE" != "200" ]; then
+  echo "  ✗ THE APP LAYER DID NOT SHIP — investigate before declaring victory."
+  exit 1
+fi
+if ! echo "$SW_HEADER" | grep -qi "service-worker-allowed:\s*/"; then
+  echo "  ✗ WORKER SCOPE HEADER MISSING — installs would be blocked on every device."
+  exit 1
+fi
+echo ""
+echo "✅ DONE — one command, whole building walked, app layer live and verified."

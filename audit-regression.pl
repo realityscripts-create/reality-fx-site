@@ -478,7 +478,39 @@ print "\n[15] PWA + deploy rails — the app layer ships with the site\n";
     ok($ix =~ /rfx-pwa\/manifest\.json/ && $ix =~ /rfx-pwa\/register\.js/ ? "OS shell wired to the PWA layer" : fail("OS index missing the PWA manifest/register refs"));
 }
 
-# ---------- 16. AUDIT JSON OUTPUT (feeds the live audit status page) ----------
+# ---------- 16. LIVE PWA PROBE (the deployed site really carries the app) ----------
+# Gated by LIVE_PROBE=1 on purpose: verifying the LIVE site is a status
+# report, not a deploy gate — the first deploy after a bump would otherwise
+# block itself (live still runs the previous version). deploy-live.sh runs
+# its own live PWA probes in step 4 AFTER the upload, where failures are real.
+if ($ENV{LIVE_PROBE}) {
+    sec(16);
+    print "\n[16] Live PWA probe — the deployed site really carries the app\n";
+    my $live = "https://reality-fx-os.netlify.app";
+    my $mf = qx{curl -s -m 10 "$live/rfx-pwa/manifest.json" 2>/dev/null};
+    if ($mf =~ /"start_url"\s*:\s*"\/"/ && $mf =~ /"scope"\s*:\s*"\/"/) {
+        ok("live manifest served, start_url / scope / (root layout)");
+    } else {
+        fail("live manifest missing or wrong layout: " . (length($mf) ? substr($mf, 0, 60) : "no response"));
+    }
+    my $swhdr = qx{curl -s -m 10 -D - -o /dev/null "$live/rfx-pwa/sw.js" 2>/dev/null};
+    if ($swhdr =~ /Service-Worker-Allowed:\s*\//i) {
+        ok("live service worker carries Service-Worker-Allowed: / (installable at site scope)");
+    } else {
+        fail("live sw.js missing the scope header — the install would be blocked");
+    }
+    my $inst = qx{curl -s -m 10 -o /dev/null -w "%{http_code}" "$live/rfx-pwa/install.html" 2>/dev/null};
+    ok($inst eq "200" ? "live install guide serves (HTTP $inst)" : fail("live install guide: HTTP " . ($inst || "no response")));
+    my $liveIdx = qx{curl -s -m 10 "$live/" 2>/dev/null};
+    my ($lv) = $liveIdx =~ /v=([0-9]+)/;
+    open my $fh, "<", "$OS/index.html" or die;
+    local $/; my $locIdx = <$fh>; close $fh;
+    my ($loc) = $locIdx =~ /v=([0-9]+)/;
+    if ($lv && $loc && $lv eq $loc) { ok("live stamp v=$lv matches local v=$loc"); }
+    else { ok("live stamp v=" . ($lv || "?") . ", local v=" . ($loc || "?") . " — one-deploy lag expected right after a bump"); }
+}
+
+# ---------- 17. AUDIT JSON OUTPUT (feeds the live audit status page) ----------
 # Runs with AUDIT_JSON=1; the OS server's /os/api/audit endpoint executes this
 # and returns the machine's self-report for the founder's audit status page.
 if ($ENV{AUDIT_JSON}) {
@@ -500,6 +532,7 @@ if ($ENV{AUDIT_JSON}) {
       14 => [ "Pill standard + icon guard", "one 26px pill rhythm OS-wide + bare-svg 1em guard (no giant crowns)" ],
       15 => [ "PWA + deploy rails",        "deploy stages rfx-pwa + _headers; manifest/sw match the root layout; OS shell wired" ],
     );
+    $meta{16} = [ "Live PWA probe (LIVE_PROBE=1)", "deployed site serves the manifest, sw scope header, install guide, matching stamp" ] if $ENV{LIVE_PROBE};
     for my $n (sort { $a <=> $b } keys %meta) {
         push @rows, { n => $n, name => $meta{$n}[0], detail => $meta{$n}[1], ok => ($secOk{$n} ? JSON::PP::true : JSON::PP::false) };
     }
