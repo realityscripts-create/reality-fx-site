@@ -1237,3 +1237,39 @@ flipping to a green "The doors are open → Begin registration" state on
 repo; audit ALL GREEN; OS v81.
 
 — Zorro (System B), 15 August 2026
+
+## 45. Launch waitlist + the Android wrapper + the print-rail guard · 17 Aug 2026
+
+**The Reserve button is now a real waitlist.** The hero's "Reserve my
+place" is an inline email capture that POSTs to a new `/api/waitlist` rail
+in the production function (email-keyed blob, spam-safe, branded
+confirmation email when Resend is live — and no public count ever, per
+the founder's anonymous-student-count call). Register.html gained the
+opening-day band ("The Academy opens 30 September 2026 — in N days") and
+a waitlist rescue on the link-error screen so nobody with a stale link is
+lost. Verified live on the hero: reserve → "Reserving…" → ✓ confirmed.
+
+**The Android wrapper is built** — `android-wrapper/` in the repo root:
+Capacitor project, one-command `bash build-apk.sh` (or `build-apk.ps1`),
+composing the OS + PWA into the exact production layout (764 files, 741
+slides) with the service worker moved to root scope so the whole shell
+caches offline inside the APK, plus a crown-icon installer. No Java/Node
+on this machine, so the APK itself builds on Lee's box: `npm install` →
+`npm run android:init` → `bash build-apk.sh` → `dist/RFX-OS-Android.apk`
+with the SHA-256 printed for the email. The composed payload was booted
+live in the preview — full OS, all rooms, SW registered.
+
+**Careers salaries fixed** — the fantasy figures (R55k/mo Senior Trader)
+are now realistic SA market rates (R24–38k), because the salaries page is
+read by the very people we want to hire.
+
+**Audit section 21** — the certificate print rail is machine-guarded
+(button → certPageHTML → A4-landscape standalone; print CSS geometry).
+Audit ALL GREEN across all 21 sections. Also delivered:
+`RFX-LAUNCH-DAY-PLAYBOOK.md` (the 30 September runbook, hour by hour,
+with incident responses) and `RFX-MOBILE-AUDIT-CHECKLIST.md` (every build
+walks it top to bottom before a single student's phone sees it).
+
+Pushed: outer `0405c6d` · OS `362ffa8` · System A `6ab3675`.
+
+— Zorro (System B), 17 August 2026
