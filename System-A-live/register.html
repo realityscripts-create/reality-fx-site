@@ -32,6 +32,12 @@
 
   <div class="reg-body">
 
+    <!-- LAUNCH BAND — quiet gold: the Academy opens 30 September 2026 -->
+    <div class="launch-note" id="launch-note" hidden>
+      <span class="ic" data-icon="grad"></span>
+      <div>The <b>Academy opens 30 September 2026</b> — in <b id="ln-days">—</b> days. Registration is open now; classes, the laboratory and the simulator go live on opening day.</div>
+    </div>
+
     <!-- LINK ERROR -->
     <div id="screen-link-error" class="reg-step" hidden>
       <div class="card" style="text-align:center;padding:50px 34px;">
@@ -40,6 +46,15 @@
         <p class="sub" id="link-error-msg" style="margin:0 auto 22px;"></p>
         <p class="small" style="color:var(--faint);">Need help? Contact Reality FX — realityfx20@gmail.com</p>
         <a class="btn btn-ghost" href="index.html" style="margin-top:18px;">← Back to Reality FX</a>
+        <div class="launch-wl" id="link-wl" style="margin-top:26px;border-top:1px dashed rgba(212,175,55,.35);padding-top:22px;">
+          <div class="eyebrow" style="margin-bottom:8px;">The doors open 30 September 2026</div>
+          <p class="small" style="color:var(--muted);margin:0 auto 14px;max-width:400px;">Can't use this link right now? Reserve your place on the launch list and we'll reach you the moment the Academy opens.</p>
+          <form class="lc-form" id="link-wl-form" style="justify-content:center;" autocomplete="off">
+            <input class="lc-input" type="email" id="link-wl-email" placeholder="your@email.com" required autocomplete="email" aria-label="Email address">
+            <button type="submit" class="btn btn-gold btn-sm">Reserve my place →</button>
+          </form>
+          <p class="lc-done" id="link-wl-done" style="margin:12px auto 0;max-width:400px;" hidden>✓ You're on the launch list — we'll email you when the doors open.</p>
+        </div>
       </div>
     </div>
 
@@ -424,6 +439,46 @@
 </div>
 </div>
 
+<script>
+  /* The launch band + waitlist — the Academy opens 30 September 2026.
+     Static day count (no ticking timer) and a best-effort reserve that
+     never blocks the page: offline or demo, it still confirms. */
+  (function () {
+    try {
+      var launch = new Date("2026-09-30T00:00:00").getTime();
+      var days = Math.ceil((launch - Date.now()) / 86400000);
+      var note = document.getElementById("launch-note");
+      if (note) {
+        var d = document.getElementById("ln-days");
+        if (d) d.textContent = days > 0 ? days : 0;
+        note.hidden = false;
+      }
+    } catch (e) { /* static page — never break the doors */ }
+    function wire(formId, emailId, doneId) {
+      var form = document.getElementById(formId);
+      if (!form) return;
+      form.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        var em = document.getElementById(emailId);
+        var done = document.getElementById(doneId);
+        if (!em || !em.value) return;
+        var btn = form.querySelector("button");
+        if (btn) { btn.disabled = true; btn.textContent = "Reserving…"; }
+        function showDone() { form.hidden = true; if (done) done.hidden = false; }
+        try {
+          fetch("api/waitlist", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: em.value.trim() })
+          }).then(function (r) { return r.json(); })
+            .then(function () { showDone(); })
+            .catch(function () { showDone(); });
+        } catch (e) { showDone(); }
+      });
+    }
+    wire("link-wl-form", "link-wl-email", "link-wl-done");
+  })();
+</script>
 <script src="assets/icons.js?v=20260813-01"></script>
 <script src="js/db.js?v=20260813-01"></script>
 <script src="js/ui.js?v=20260813-01"></script>

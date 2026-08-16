@@ -607,6 +607,30 @@ print "\n[20] Icon tripwire — every ICONS reference resolves, dynamic lookups 
     ok($os =~ /\bICONS\[[^]]+\]/ ? "dynamic ICONS[] lookups present (all routed through the ic() fallback where user-facing)" : fail("no dynamic icon lookups to guard"));
 }
 
+# ---------- 21. CERTIFICATE PRINT RAIL (the trophy, on paper) ----------
+# The Print certificate button builds a self-contained A4-landscape page
+# from the student's live record; a popup-blocked browser falls back to the
+# OS print stylesheet. If the button, the generator or the print CSS ever
+# unwire, students lose the certificate on paper — this section keeps the
+# whole rail tripped.
+sec(21);
+print "\n[21] Certificate print rail — the trophy, on paper\n";
+{
+    open my $fh, "<", "$OS/js/os.js" or die;
+    local $/; my $os = <$fh>; close $fh;
+    my @pmiss;
+    push @pmiss, "print button"    unless $os =~ /id=\"certPrint\"/ && $os =~ /Print certificate \(PDF\)/;
+    push @pmiss, "click wiring"    unless $os =~ /\#certPrint\"\)\.addEventListener\("click", \(\) => printCertificate\(\)\)/;
+    push @pmiss, "generator pair"  unless $os =~ /function printCertificate\(\)/ && $os =~ /function certPageHTML\(d\)/;
+    push @pmiss, "live record"     unless $os =~ /certPageHTML\(\{ name, code, xp, rank, dateShort, dateLong, examLine, badges \}\)/;
+    push @pmiss, "popup fallback"  unless $os =~ /window\.print\(\)/;
+    push @pmiss, "A4 landscape"    unless $os =~ /size:A4 landscape;margin:0/;
+    ok(!@pmiss ? "OS print rail wired: button -> certPageHTML from the live record -> A4-landscape standalone page" : fail("print rail missing: " . join(", ", @pmiss)));
+    open my $ch, "<", "$OS/css/os.css" or die;
+    local $/; my $css = <$ch>; close $ch;
+    ok($css =~ /\@media print/ && $css =~ /\@page \{ size: A4 landscape; margin: 0; \}/ ? "print CSS: A4 landscape, zero margins (full-bleed dark trophy)" : fail("certificate print CSS missing or wrong page geometry"));
+}
+
 # ---------- 17. LIVE PWA PROBE (the deployed site really carries the app) ----------
 # Gated by LIVE_PROBE=1 on purpose: verifying the LIVE site is a status
 # report, not a deploy gate — the first deploy after a bump would otherwise
@@ -664,6 +688,7 @@ if ($ENV{AUDIT_JSON}) {
       18 => [ "The gate rail",             "fork answers /api/gate off the loginAttempts throttle record; 8125 in start-demo + watchdog; OS heartbeat polls it" ],
       19 => [ "Workshops & drills rail",   "7 workshops, 1% + MA workbench drills, breakout sizing, XP rewards, MA sandbox in the Lab" ],
       20 => [ "Icon tripwire",              "every ICONS reference resolves; unknown keys fall back to a neutral mark, never 'undefined'" ],
+      21 => [ "Certificate print rail",      "Print certificate button -> certPageHTML from the live record -> A4-landscape standalone; popup-blocked fallback + matching print CSS" ],
     );
     $meta{17} = [ "Live PWA probe (LIVE_PROBE=1)", "deployed site serves the manifest, sw scope header, install guide, matching stamp" ] if $ENV{LIVE_PROBE};
     for my $n (sort { $a <=> $b } keys %meta) {

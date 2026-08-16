@@ -1,0 +1,19 @@
+{
+  "name": "reality-fx-os-android",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The Android wrapper for the Reality FX Trading Academy OS — a Capacitor shell around the existing web OS. Never a rebuild: the RFX brain stays exactly where it lives.",
+  "scripts": {
+    "build:web": "bash scripts/build-web.sh",
+    "android:init": "npx cap add android",
+    "android:sync": "bash scripts/build-web.sh && npx cap sync android",
+    "android:dev": "bash scripts/build-web.sh && npx cap sync android && npx cap open android",
+    "android:apk": "bash scripts/build-web.sh && npx cap sync android && cd android && ./gradlew assembleRelease",
+    "android:icons": "bash scripts/copy-icons.sh"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^5.7.4",
+    "@capacitor/cli": "^5.7.4",
+    "@capacitor/core": "^5.7.4"
+  }
+}

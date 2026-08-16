@@ -227,6 +227,43 @@ function deviceCheckHTML(code) {
     "realityfx.netlify.app · &quot;Every lesson is a trade. Every trade is a lesson.&quot;</div>";
 }
 
+/* ---------- the launch waitlist ----------
+   Prospective students reserve a place before the doors open on
+   30 September 2026. Public and deliberately thin: an email (and an
+   optional first name) lands in the waitlist blob, keyed by email so
+   reserving twice just refreshes the timestamp. No count is ever exposed
+   publicly — the machine never leaks how many are waiting. When Resend
+   is configured, the reserved spot gets a quiet branded confirmation. */
+async function postWaitlist(pl) {
+  if (!pl || typeof pl !== "object") return bad("email required");
+  const email = String(pl.email || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return bad("a valid email is required");
+  const name = String(pl.name || "").trim().slice(0, 60);
+  const rec = { email: email, name: name, at: nowSec() };
+  await mutate("waitlist", email, () => rec);
+  let mail = "no-address";
+  if (process.env.RESEND_API_KEY) {
+    const r = await deliverMail(email, "Reality FX — you're on the launch list", waitlistHTML(rec));
+    mail = r.ok ? "sent" : "pending";
+  }
+  return ok({ ok: true, reserved: true, mail: mail });
+}
+
+/* The launch-list confirmation — same gold crown wordmark + house rule as
+   every Reality FX email, so the reserved spot never reads as spam. */
+function waitlistHTML(rec) {
+  return "<div style=\"border-bottom:2px solid #d4af37;padding-bottom:16px;margin-bottom:22px;\">" +
+    "<div style=\"font-family:Georgia,serif;color:#080808;font-size:24px;font-weight:700;\">&#9819; Reality FX <span style=\"color:#a8842a;\">Academy</span></div>" +
+    "<div style=\"font-size:9px;letter-spacing:3px;color:#8a8a8a;font-family:Arial,sans-serif;margin-top:2px;\">THE TRADING ACADEMY · THE LAUNCH LIST</div>" +
+    "<div style=\"font-family:Georgia,serif;font-style:italic;font-size:12px;color:#a8842a;margin-top:8px;\">&quot;Every lesson is a trade. Every trade is a lesson.&quot;</div></div>" +
+    "<p style=\"font-family:Arial,sans-serif;font-size:14px;color:#333;\">You're on the list" + (rec.name ? ", " + escHtml(rec.name) : "") + ".</p>" +
+    "<p style=\"font-family:Arial,sans-serif;font-size:14px;color:#333;\">The doors open <b style=\"color:#a8842a;\">30 September 2026</b>. When the Academy goes live you'll be first to know — before the announcement, before the queues.</p>" +
+    "<p style=\"font-family:Arial,sans-serif;font-size:13px;color:#777;\">No spam, no noise — one email when it matters. If you did not reserve a place, simply ignore this message.</p>" +
+    "<div style=\"margin-top:26px;padding-top:14px;border-top:1px dashed #c9b37a;font-size:11px;color:#8a8a8a;font-family:Arial,sans-serif;\">" +
+    "<div style=\"font-family:Georgia,serif;font-size:13px;color:#a8842a;font-weight:700;\">Reality FX — The Trading Academy</div>" +
+    "Learn before you risk. realityfx.netlify.app · 30 . 09 . 2026 — the doors open.</div>";
+}
+
 async function postFlagsReport(pl) {
   if (!pl || !pl.studentId || !Array.isArray(pl.flags)) return json(400, { accepted: false, reason: "studentId and flags[] required" });
   let added = 0;
@@ -675,6 +712,9 @@ exports.handler = async (event) => {
     return ok(rec ? rec.value : []);
   }
   if (method === "POST" && path === "mail") return postMail(parseBody(event));
+
+  // The launch waitlist — public, thin, spam-safe (email-keyed).
+  if (method === "POST" && path === "waitlist") return postWaitlist(parseBody(event));
 
   if (method === "POST" && path === "flags/report") return postFlagsReport(parseBody(event));
   if (method === "GET" && path === "flags") {

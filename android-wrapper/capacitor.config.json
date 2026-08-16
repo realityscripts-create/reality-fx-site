@@ -1,0 +1,18 @@
+{
+  "appId": "za.co.realityfx.os",
+  "appName": "Reality FX OS",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "backgroundColor": "#0A0A0A",
+      "showSpinner": false
+    }
+  }
+}
