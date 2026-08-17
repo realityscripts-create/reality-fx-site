@@ -700,14 +700,28 @@ print "\n[23] Credential verification rail — scan -> verify -> trust\n";
     local $/; my $srv = <$fh2>; close $fh2;
     ok($srv =~ /\/os\/api\/credentials/ && $srv =~ /credentials\/activity/ ? "demo server serves registry + logs lookups"
        : fail("demo server credentials rail missing"));
+    ok($srv =~ /credentials\/register/ && $srv =~ /credentials\/mint/ && $srv =~ /credentials\/revoke/ && $srv =~ /credentials\/activity/ && $srv =~ /registry_auth/ && $srv =~ /role\s+=>/ ? "demo server: register/mint/revoke/activity endpoints gated by registry_auth, role persisted"
+       : fail("demo server Phase 2 console rail missing"));
     open my $fh3, "<", "netlify/functions/osapi.js" or die;
     local $/; my $fn = <$fh3>; close $fh3;
     ok($fn =~ /path === \"credentials\"/ && $fn =~ /credentials\/activity/ ? "production function serves registry + logs lookups"
        : fail("production function credentials rail missing"));
+    ok($fn =~ /credentials\/register/ && $fn =~ /credentials\/mint/ && $fn =~ /credentials\/revoke/ && $fn =~ /credentials\/activity/ && $fn =~ /function registryAuth/ ? "production function: register/mint/revoke/activity gated by registryAuth against the handoff blob"
+       : fail("production function Phase 2 console rail missing"));
     open my $fh4, "<", "deploy-live.sh" or die;
     local $/; my $dep = <$fh4>; close $fh4;
     ok($dep =~ /verify\.html/ && $dep =~ /\/verify\/\*/ ? "deploy stages verify.html + the /verify/* rewrite"
        : fail("deploy staging of the verify rail missing"));
+    open my $fh5, "<", "$OS/js/os.js" or die;
+    local $/; my $os = <$fh5>; close $fh5;
+    ok($os =~ /function registerCredential/ && $os =~ /api\/credentials\/register/ && $os =~ /credRegistered/ ? "OS auto-registers the earned certificate with the registry (once, verified identities only)"
+       : fail("OS register-on-issue missing"));
+    ok($os =~ /function renderRegistry/ && $os =~ /isRegistryAdmin/ && $os =~ /view === \"registry\"/ && $os =~ /credentials\/mint/ && $os =~ /credentials\/revoke/ && $os =~ /credentials\/activity/ ? "OS Registry Console: route + gate + mint/revoke/search/audit"
+       : fail("OS Registry Console missing"));
+    open my $fh6, "<", "$OS/index.html" or die;
+    local $/; my $idx = <$fh6>; close $fh6;
+    ok($idx =~ /navRegistry/ && $idx =~ /data-route=\"registry\"/ ? "Registry Console nav door present (hidden for non-admins)"
+       : fail("Registry Console nav door missing"));
 }
 
 # ---------- 17. LIVE PWA PROBE (the deployed site really carries the app) ----------
@@ -769,7 +783,7 @@ if ($ENV{AUDIT_JSON}) {
       20 => [ "Icon tripwire",              "every ICONS reference resolves; unknown keys fall back to a neutral mark, never 'undefined'" ],
       21 => [ "Certificate print rail",      "Print certificate button -> certPageHTML from the live record -> A4-landscape standalone; popup-blocked fallback + matching print CSS" ],
       22 => [ "Honours-wall honesty",         "no fabricated graduates, summits or current-year winners before launch (the wall fills as the Academy grows)" ],
-      23 => [ "Credential verification rail",  "certificate QR -> /verify/<id> page: VALID / REVOKED / NOT VERIFIED + manual lookup, registry on server + function, deploy rewrite" ],
+      23 => [ "Credential verification rail",  "QR -> /verify/<id> (VALID / REVOKED / NOT VERIFIED + manual lookup); Registry Console mints/revokes (founder-admin gated); register-on-issue; server + function + deploy wired" ],
     );
     $meta{17} = [ "Live PWA probe (LIVE_PROBE=1)", "deployed site serves the manifest, sw scope header, install guide, matching stamp" ] if $ENV{LIVE_PROBE};
     for my $n (sort { $a <=> $b } keys %meta) {

@@ -690,6 +690,21 @@ async function postChallengeResult(pl) {
   return ok({ ok: true });
 }
 
+/* Registry admin gate — the authority comes from the server's OWN handoff
+   store, never from a client claim: 'admin' (founder or role=admin),
+   'student' (enrolled identity), 'none' (unknown). */
+async function registryAuth(studentId) {
+  if (!studentId) return "none";
+  try {
+    const rec = await blobGet("handoffs", "handoffs");
+    const list = rec ? rec.value : [];
+    const h = list.find((x) => x.studentId === studentId);
+    if (!h) return "none";
+    if (h.founder || h.role === "admin") return "admin";
+    return "student";
+  } catch (e) { return "none"; }
+}
+
 /* ---------- the handler ---------- */
 
 exports.handler = async (event) => {
@@ -788,7 +803,10 @@ exports.handler = async (event) => {
   // The credential verification rail — public /verify page reads the
   // registry (VALID / REVOKED) and logs lookup outcomes. The registry is
   // seeded via the Phase 2 admin console once the Academy opens; before
-  // that, every scan honestly returns NOT VERIFIED.
+  // that, every scan honestly returns NOT VERIFIED. Writes (register /
+  // mint / revoke) are gated on the server's OWN handoff store: an
+  // enrolled student may auto-register their earned credential; only the
+  // founder or an admin handoff may mint or revoke.
   if (method === "GET" && path === "credentials") {
     const rec = await blobGet("credentials", "registry");
     return ok({ credentials: rec ? rec.value : [] });
@@ -799,6 +817,83 @@ exports.handler = async (event) => {
     const ev = { id: String(pl.id).slice(0, 40), outcome: String(pl.outcome || "LOOKUP").slice(0, 16), at: nowSec() };
     await mutate("credActivity", "log", (list) => { list.push(ev); return list.slice(-2000); });
     return ok({ ok: true });
+  }
+  if (method === "POST" && path === "credentials/register") {
+    const pl = parseBody(event);
+    if (!pl || !pl.credential_id || !pl.student_name) return bad("credential_id and student_name required");
+    const auth = await registryAuth(pl.student_id || "");
+    if (auth === "none") return json(403, { ok: false, reason: "verified identity required" });
+    const id = String(pl.credential_id).toUpperCase();
+    if (!/^RFX-\d{4}-[0-9A-Z]{4,8}$/.test(id)) return bad("malformed credential id");
+    let exists = false, added = null;
+    await mutate("credentials", "registry", (list) => {
+      exists = list.some((r) => r.credential_id === id);
+      if (exists) return list;
+      added = {
+        credential_id: id,
+        credential_name: String(pl.credential_name || "RFX Certified Trader").slice(0, 80),
+        student_name: String(pl.student_name).slice(0, 80),
+        issue_date: String(pl.issue_date || "").slice(0, 60),
+        status: "VALID",
+        registered_by: String(pl.student_id || "").slice(0, 40),
+        registered_at: nowIso(),
+      };
+      list.push(added);
+      return list;
+    });
+    return ok({ ok: true, already: exists, credential_id: id });
+  }
+  if (method === "POST" && path === "credentials/mint") {
+    const pl = parseBody(event);
+    if (!pl || !pl.credential_id || !pl.student_name) return bad("credential_id and student_name required");
+    if ((await registryAuth(pl.admin_id || "")) !== "admin") return json(403, { ok: false, reason: "registry admin required" });
+    const id = String(pl.credential_id).toUpperCase();
+    if (!/^RFX-\d{4}-[0-9A-Z]{4,8}$/.test(id)) return bad("malformed credential id");
+    let exists = false;
+    await mutate("credentials", "registry", (list) => {
+      exists = list.some((r) => r.credential_id === id);
+      if (exists) return list;
+      list.push({
+        credential_id: id,
+        credential_name: String(pl.credential_name || "RFX Certified Trader").slice(0, 80),
+        student_name: String(pl.student_name).slice(0, 80),
+        issue_date: String(pl.issue_date || "").slice(0, 60),
+        status: "VALID",
+        minted_by: String(pl.admin_id || "").slice(0, 40),
+        minted_at: nowIso(),
+      });
+      return list;
+    });
+    return ok({ ok: true, already: exists, credential_id: id });
+  }
+  if (method === "POST" && path === "credentials/revoke") {
+    const pl = parseBody(event);
+    if (!pl || !pl.credential_id) return bad("credential_id required");
+    if ((await registryAuth(pl.admin_id || "")) !== "admin") return json(403, { ok: false, reason: "registry admin required" });
+    const id = String(pl.credential_id).toUpperCase();
+    let found = false, already = false;
+    await mutate("credentials", "registry", (list) => {
+      for (const r of list) {
+        if (r.credential_id === id) {
+          found = true;
+          if (r.status === "REVOKED") { already = true; return list; }
+          r.status = "REVOKED";
+          r.revoked_at = nowIso();
+          r.revocation_reason = String(pl.reason || "").slice(0, 160);
+          r.revoked_by = String(pl.admin_id || "").slice(0, 40);
+          return list;
+        }
+      }
+      return list;
+    });
+    if (!found) return json(404, { ok: false, reason: "no such credential" });
+    return ok({ ok: true, already, credential_id: id });
+  }
+  if (method === "GET" && path === "credentials/activity") {
+    const sid = String(event.queryStringParameters ? event.queryStringParameters.admin || "" : "");
+    if ((await registryAuth(sid)) !== "admin") return json(403, { ok: false, reason: "registry admin required" });
+    const rec = await blobGet("credActivity", "log");
+    return ok({ activity: rec ? rec.value : [] });
   }
 
   if (method === "GET" && path === "rooms") return getRooms();

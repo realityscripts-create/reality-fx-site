@@ -261,6 +261,40 @@ sub log_cred_activity {
   save_cred_activity($list);
   return $rec;
 }
+# Save the full registry (used by mint / revoke / register). The file is the
+# single source of truth; every write is atomic like every other OS store.
+sub save_credentials {
+  my ($list) = @_;
+  return atomic_write(credentials_file(), JSON::PP->new->utf8->canonical->pretty->encode({ credentials => $list }));
+}
+# A registry write is only for verified identities: the caller must be an
+# enrolled student (auto-register on issue) or the registry admin (mint,
+# revoke — the founder or a handoff with role=admin). The role is read from
+# the server's OWN handoff store, never from the client's claim alone.
+sub registry_auth {
+  my ($sid) = @_;
+  return 'none' unless $sid;
+  my $rec;
+  for my $h (@{ load_handoffs() }) { if ($h->{studentId} eq $sid) { $rec = $h; last; } }
+  return 'none' unless $rec;
+  return 'admin' if $rec->{founder} || ($rec->{role} || '') eq 'admin';
+  return 'student';
+}
+sub cred_id_ok {
+  my ($id) = @_;
+  return ($id =~ /^RFX-\d{4}-[0-9A-Z]{4,8}$/) ? 1 : 0;
+}
+sub registry_find {
+  my ($list, $id) = @_;
+  for my $r (@$list) { return $r if ($r->{credential_id} || '') eq $id; }
+  return undef;
+}
+sub registry_put {
+  my ($list, $rec) = @_;
+  for my $r (@$list) { return $r if ($r->{credential_id} || '') eq $rec->{credential_id}; }
+  push @$list, $rec;
+  return undef;
+}
 
 # --- Live Rooms store (Live Studio broadcasts: mentor lessons + staff meetings) ---
 sub rooms_file { my $s = $stateFile; $s =~ s/handoffs\.json$/rooms.json/; return $s; }
@@ -391,6 +425,7 @@ sub serve {
         status      => $payload->{status} || 'ready',
         # FOR-LEE §9.38/§9.39 contract fields — optional, defaults keep the
         # record backward-compatible. The OS reads these back.
+        role          => substr($payload->{role} || '', 0, 20),
         founder       => ($payload->{founder} ? JSON::PP::true : JSON::PP::false),
         demoTourEndsAt=> $payload->{demoTourEndsAt} || '',
         trust         => ($payload->{trust} && ref($payload->{trust}) eq 'HASH') ? $payload->{trust} : {},
@@ -464,11 +499,14 @@ sub serve {
     resp_json($c, 200, { ok => JSON::PP::true, ref => $req->{ref}, kind => $req->{kind}, receiptEmail => 'pending' });
     close $c; return;
   }
-  # --- Credential verification rail (the /verify page) ---
+  # --- Credential verification rail (the /verify page + Registry Console) ---
   # GET serves the registry (VALID / REVOKED records); POST logs a lookup
   # outcome for audit. No scanner identity is ever stored — only the
-  # credential ID, the outcome, and the time.
-  if ($method eq 'OPTIONS' && $clean eq '/os/api/credentials/activity') {
+  # credential ID, the outcome, and the time. Writes (register / mint /
+  # revoke) are gated on the server's OWN handoff store: an enrolled
+  # student may auto-register their earned credential; only the founder or
+  # an admin handoff may mint or revoke.
+  if ($method eq 'OPTIONS' && $clean =~ m{^/os/api/credentials(?:/|\z)}) {
     resp_json($c, 204, {});
     close $c; return;
   }
@@ -485,6 +523,115 @@ sub serve {
     }
     log_cred_activity($pl);
     resp_json($c, 200, { ok => JSON::PP::true });
+    close $c; return;
+  }
+  if ($method eq 'POST' && $clean eq '/os/api/credentials/register') {
+    my $body = read_body($c, $clen);
+    my $pl = eval { JSON::PP->new->utf8->decode($body) };
+    if (!$pl || !$pl->{credential_id} || !$pl->{student_name}) {
+      resp_json($c, 400, { ok => JSON::PP::false, reason => 'credential_id and student_name required' });
+      close $c; return;
+    }
+    # only a verified enrolled identity may register its own earned credential
+    my $auth = registry_auth($pl->{student_id} || '');
+    if ($auth eq 'none') {
+      resp_json($c, 403, { ok => JSON::PP::false, reason => 'verified identity required' });
+      close $c; return;
+    }
+    my $id = uc($pl->{credential_id});
+    if (!cred_id_ok($id)) {
+      resp_json($c, 400, { ok => JSON::PP::false, reason => 'malformed credential id' });
+      close $c; return;
+    }
+    my $list = load_credentials();
+    if (registry_find($list, $id)) {
+      resp_json($c, 200, { ok => JSON::PP::true, already => JSON::PP::true, credential_id => $id });
+      close $c; return;
+    }
+    push @$list, {
+      credential_id   => $id,
+      credential_name => substr($pl->{credential_name} || 'RFX Certified Trader', 0, 80),
+      student_name    => substr($pl->{student_name}, 0, 80),
+      issue_date      => substr($pl->{issue_date} || '', 0, 60),
+      status          => 'VALID',
+      registered_by   => substr($pl->{student_id} || '', 0, 40),
+      registered_at   => scalar(gmtime),
+    };
+    save_credentials($list);
+    resp_json($c, 200, { ok => JSON::PP::true, already => JSON::PP::false, credential_id => $id });
+    close $c; return;
+  }
+  if ($method eq 'POST' && $clean eq '/os/api/credentials/mint') {
+    my $body = read_body($c, $clen);
+    my $pl = eval { JSON::PP->new->utf8->decode($body) };
+    if (!$pl || !$pl->{credential_id} || !$pl->{student_name}) {
+      resp_json($c, 400, { ok => JSON::PP::false, reason => 'credential_id and student_name required' });
+      close $c; return;
+    }
+    if (registry_auth($pl->{admin_id} || '') ne 'admin') {
+      resp_json($c, 403, { ok => JSON::PP::false, reason => 'registry admin required' });
+      close $c; return;
+    }
+    my $id = uc($pl->{credential_id});
+    if (!cred_id_ok($id)) {
+      resp_json($c, 400, { ok => JSON::PP::false, reason => 'malformed credential id' });
+      close $c; return;
+    }
+    my $list = load_credentials();
+    if (registry_find($list, $id)) {
+      resp_json($c, 200, { ok => JSON::PP::true, already => JSON::PP::true, credential_id => $id });
+      close $c; return;
+    }
+    push @$list, {
+      credential_id   => $id,
+      credential_name => substr($pl->{credential_name} || 'RFX Certified Trader', 0, 80),
+      student_name    => substr($pl->{student_name}, 0, 80),
+      issue_date      => substr($pl->{issue_date} || '', 0, 60),
+      status          => 'VALID',
+      minted_by       => substr($pl->{admin_id} || '', 0, 40),
+      minted_at       => scalar(gmtime),
+    };
+    save_credentials($list);
+    resp_json($c, 200, { ok => JSON::PP::true, already => JSON::PP::false, credential_id => $id });
+    close $c; return;
+  }
+  if ($method eq 'POST' && $clean eq '/os/api/credentials/revoke') {
+    my $body = read_body($c, $clen);
+    my $pl = eval { JSON::PP->new->utf8->decode($body) };
+    if (!$pl || !$pl->{credential_id}) {
+      resp_json($c, 400, { ok => JSON::PP::false, reason => 'credential_id required' });
+      close $c; return;
+    }
+    if (registry_auth($pl->{admin_id} || '') ne 'admin') {
+      resp_json($c, 403, { ok => JSON::PP::false, reason => 'registry admin required' });
+      close $c; return;
+    }
+    my $id = uc($pl->{credential_id});
+    my $list = load_credentials();
+    my $rec = registry_find($list, $id);
+    if (!$rec) {
+      resp_json($c, 404, { ok => JSON::PP::false, reason => 'no such credential' });
+      close $c; return;
+    }
+    if (($rec->{status} || '') eq 'REVOKED') {
+      resp_json($c, 200, { ok => JSON::PP::true, already => JSON::PP::true, credential_id => $id });
+      close $c; return;
+    }
+    $rec->{status} = 'REVOKED';
+    $rec->{revoked_at} = scalar(gmtime);
+    $rec->{revocation_reason} = substr($pl->{reason} || '', 0, 160);
+    $rec->{revoked_by} = substr($pl->{admin_id} || '', 0, 40);
+    save_credentials($list);
+    resp_json($c, 200, { ok => JSON::PP::true, already => JSON::PP::false, credential_id => $id });
+    close $c; return;
+  }
+  if ($method eq 'GET' && $clean eq '/os/api/credentials/activity') {
+    my ($sid) = $path =~ /[?&]admin=([^&]+)/;
+    if (registry_auth($sid || '') ne 'admin') {
+      resp_json($c, 403, { ok => JSON::PP::false, reason => 'registry admin required' });
+      close $c; return;
+    }
+    resp_json($c, 200, { activity => load_cred_activity() });
     close $c; return;
   }
   if ($method eq 'GET' && $clean eq '/os/api/rooms') {
