@@ -1273,3 +1273,25 @@ walks it top to bottom before a single student's phone sees it).
 Pushed: outer `0405c6d` · OS `362ffa8` · System A `6ab3675`.
 
 — Zorro (System B), 17 August 2026
+
+## 46. Performance-based trader model — the careers ladder + the OS trader track · 17 Aug 2026
+
+The founder's standing decision, now encoded on both surfaces: **Reality FX does not put traders on fixed monthly salaries.** Trading compensation is a share of risk-adjusted performance on allocated capital — when the trader wins, the firm wins. Fixed salaries remain only for genuine staff roles (analysts, risk manager, mentor, support, VA).
+
+**The careers page** (`careers.html`) now shows the full capital ladder in order:
+
+| Rung | Capital | Compensation |
+|---|---|---|
+| Apprentice | Simulated | Performance-tracked, no monetary comp |
+| Junior | Small allocation | Performance share |
+| Prop/Funded | Funded allocation | Higher performance share |
+| Senior | Significant allocation | Negotiated performance share |
+| Portfolio | Strategic allocation | Profit participation |
+
+A department intro states the scoring basis explicitly: profitability, risk management, consistency, maximum drawdown, rule adherence, capital preservation. The apply-form position dropdown was updated with the two new rungs (Apprentice, Portfolio) — the "Apply Now" pre-fill silently failed before this, verified fixed live.
+
+**The OS trader track** (`sim.js` → Trading Challenge hub): the same five-rung ladder rendered in gold, with the rung **derived live from the machine-signed challenge results** — never a stored claim. Apprentice by default; Junior = a completed challenge scored 50+; Funded = one signed PASS; Senior = PASSes on 2+ challenges; Portfolio = the Prop-Style institutional pass + another PASS. Verified: a fresh student shows Apprentice; one PASS lifts to Funded; two PASSes to Senior; prop+another to Portfolio (all five lit). This is the student-facing proof path into the careers ladder — the sim measures, the machine signs, the rung moves.
+
+**Site-wide 24/7** — all "24/5" references on the public site (homepage Customer Care + Operational Excellence meter, Why Choose Us stats, Our Services coverage) now read 24/7: machines plus the double-shift team never stop.
+
+**Production note for Lee:** the OS track needs no server state — it derives from the same signed results the leaderboard rail already carries. If Firebase adoption ever replaces the sim store, keep deriving the rung from signed assessment records; a rung must never be settable by the client.
