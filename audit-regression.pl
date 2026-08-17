@@ -642,6 +642,31 @@ print "\n[21] Certificate print rail — the trophy, on paper\n";
     ok($css =~ /\@media print/ && $css =~ /\@page \{ size: A4 landscape; margin: 0; \}/ ? "print CSS: A4 landscape, zero margins (full-bleed dark trophy)" : fail("certificate print CSS missing or wrong page geometry"));
 }
 
+# ---------- 22. HONOURS-WALL HONESTY (no fabricated wins before launch) ----------
+# The founder's standard, applied to every wall: the Academy opens its doors
+# on 30 September 2026, so nothing may show as already-won before the doors
+# open. Section 10 guards the challenge leaderboard seed; this section guards
+# the Hall of Fame — no invented graduates, no invented summits, no current-
+# year performers conjured ahead of the first cohort. The wall fills as the
+# Academy actually grows, never before.
+sec(22);
+print "\n[22] Honours-wall honesty — no fabricated winners before launch\n";
+{
+    open my $fh, "<", "$OS/js/os.js" or die;
+    local $/; my $os = <$fh>; close $fh;
+    my @hmiss;
+    # any invented graduate/summit name still in the OS trips the wall
+    for my $name ("Thabo Mokoena", "Lerato Dlamini", "Amara Okafor", "Ayanda Nkosi",
+                  "Amahle Mthembu", "Nomvula Khumalo", "Daniel van der Merwe",
+                  "Tumelo Radebe", "Zanele Dlamini", "Kagiso Radebe") {
+        push @hmiss, $name if $os =~ /\Q$name\E/;
+    }
+    push @hmiss, "current-year seed not empty" unless $os =~ /HOF_CURRENT_SEED = \[\];/;
+    push @hmiss, "invented roster present" if $os =~ /entries: \[\n\s*\{ name:/;
+    ok(!@hmiss ? "Hall of Fame honest: no fabricated graduates, summits or current-year winners before launch"
+       : fail("honours wall fabricated: " . join(", ", @hmiss)));
+}
+
 # ---------- 17. LIVE PWA PROBE (the deployed site really carries the app) ----------
 # Gated by LIVE_PROBE=1 on purpose: verifying the LIVE site is a status
 # report, not a deploy gate — the first deploy after a bump would otherwise
@@ -700,6 +725,7 @@ if ($ENV{AUDIT_JSON}) {
       19 => [ "Workshops & drills rail",   "7 workshops, 1% + MA workbench drills, breakout sizing, XP rewards, MA sandbox in the Lab" ],
       20 => [ "Icon tripwire",              "every ICONS reference resolves; unknown keys fall back to a neutral mark, never 'undefined'" ],
       21 => [ "Certificate print rail",      "Print certificate button -> certPageHTML from the live record -> A4-landscape standalone; popup-blocked fallback + matching print CSS" ],
+      22 => [ "Honours-wall honesty",         "no fabricated graduates, summits or current-year winners before launch (the wall fills as the Academy grows)" ],
     );
     $meta{17} = [ "Live PWA probe (LIVE_PROBE=1)", "deployed site serves the manifest, sw scope header, install guide, matching stamp" ] if $ENV{LIVE_PROBE};
     for my $n (sort { $a <=> $b } keys %meta) {
