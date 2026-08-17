@@ -335,6 +335,17 @@ print "\n[10] Trading Challenge sim — module, route, rails\n";
     open my $fh5, "<", "netlify/functions/osapi.js" or die;
     local $/; my $fn = <$fh5>; close $fh5;
     ok($fn =~ /challenge\/leaderboard/ ? "leaderboard rail in Netlify function" : fail("leaderboard missing in Netlify function"));
+    # --- the leaderboard honesty standard (the awards lesson, applied) ---
+    # The wall shows that a challenge has been TRIED and that passing is
+    # POSSIBLE — never that it has already been done by many. The seed may
+    # fabricate exactly ONE entry, and that entry must be a single PASS.
+    open my $fs, "<", ".freebuff/tools/seed-challenges.pl" or die;
+    local $/; my $seed = <$fs>; close $fs;
+    my @seedV = $seed =~ /^\s*\[ \s*"[^"]+",\s*"[^"]+",\s*"[^"]+",\s*\d+,\s*"(PASS|REVIEW)"/gm;
+    my $seedRows = scalar(@seedV);
+    my $seedPass = grep { $_ eq "PASS" } @seedV;
+    ok($seedRows == 1 && $seedPass == 1 ? "leaderboard seed: exactly 1 entry, 1 PASS (honesty standard)"
+       : fail("leaderboard seed broke the honesty standard: $seedRows row(s), $seedPass PASS(es)"));
     # --- sim performance budget (architectural guarantees, not hopes) ---
     # Measured live at 600 open positions: 6.6ms/tick in place vs ~55ms + an
     # iframe reload for the old full rebuild. The budget is kept by structure:
@@ -695,7 +706,7 @@ if ($ENV{AUDIT_JSON}) {
         push @rows, { n => $n, name => $meta{$n}[0], detail => $meta{$n}[1], ok => ($secOk{$n} ? JSON::PP::true : JSON::PP::false) };
     }
     print "\n---AUDITJSON---\n";
-    print JSON::PP->new->utf8->canonical->encode({ at => scalar(gmtime), ok => (scalar(@fails) ? JSON::PP::false : JSON::PP::true), fails => scalar(@fails), checks => \@rows });
+    print JSON::PP->new->utf8->canonical->encode({ at => scalar(localtime), atEpoch => time(), ok => (scalar(@fails) ? JSON::PP::false : JSON::PP::true), fails => scalar(@fails), checks => \@rows });
     print "\n";
 }
 

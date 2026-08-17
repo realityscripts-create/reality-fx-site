@@ -132,6 +132,9 @@ sub save_challenges {
   return save_device_records($r);
 }
 
+# --- audit result cache (the last completed regression walk) ---
+sub audit_cache_file { my $s = $stateFile; $s =~ s/handoffs\.json$/audit-cache.json/; return $s; }
+
 # --- Trading Challenge leaderboard (machine-signed results) ---
 sub challenges_file { my $s = $stateFile; $s =~ s/handoffs\.json$/challenges.json/; return $s; }
 sub load_board {
@@ -862,14 +865,39 @@ sub serve {
   # The founder's audit status page (#/audit) polls this. It runs the same
   # audit-regression.pl that gates deploys, in JSON mode, and streams the
   # machine's own verdict — the building inspecting itself, live.
+  #
+  # The stamp problem, fixed: the audit is a ~20-second walk, the server forks
+  # per connection, and the page polls every minute — so concurrent runs could
+  # finish out of order and paint an OLDER "last run" over a newer one. Now the
+  # completed result is cached (file + flock, so fork children never stampede),
+  # the page gets it instantly, and the timestamp on the wall is always the
+  # time the last audit actually completed. ?refresh=1 (the "Run the audit now"
+  # button) forces a fresh walk past the cache.
   if ($method eq 'GET' && $clean eq '/os/api/audit') {
-    my $audit = qx{cd "." && AUDIT_JSON=1 perl audit-regression.pl 2>/dev/null};
+    my $force = ($path =~ /[?&]refresh=1(?:&|$)/) ? 1 : 0;
+    my $cacheF = audit_cache_file();
+    my $lockF = "$cacheF.lock";
+    open my $lock, '>', $lockF or do { resp_json($c, 500, { ok => JSON::PP::false, fails => 1, checks => [], error => 'audit cache lock failed' }); close $c; return; };
+    flock($lock, LOCK_EX);
     my $json = '';
+    if (!$force && -f $cacheF) {
+      open my $cf, '<:raw', $cacheF or die "can't read $cacheF";
+      local $/; $json = <$cf>; close $cf;
+      if ($json =~ /"atEpoch":\s*(\d+)/ && time() - $1 < 50) {
+        # fresh enough — serve the last completed audit as-is
+        print $c "HTTP/1.1 200\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nCache-Control: no-store\r\nContent-Length: " . length($json) . "\r\nConnection: close\r\n\r\n$json";
+        close $lock; close $c; return;
+      }
+      $json = '';
+    }
+    my $audit = qx{cd "." && AUDIT_JSON=1 perl audit-regression.pl 2>/dev/null};
     if ($audit =~ /---AUDITJSON---\s*(\{.*\})/s) { $json = $1; }
     if (!$json) {
-      resp_json($c, 200, { at => scalar(gmtime), ok => JSON::PP::false, fails => 1, checks => [], error => 'audit engine unreachable' });
-      close $c; return;
+      $json = JSON::PP->new->utf8->encode({ at => scalar(localtime), atEpoch => time(), ok => JSON::PP::false, fails => 1, checks => [], error => 'audit engine unreachable' });
+    } else {
+      atomic_write($cacheF, $json);
     }
+    close $lock;
     print $c "HTTP/1.1 200\r\n" .
       "Content-Type: application/json\r\n" .
       "Access-Control-Allow-Origin: *\r\n" .
