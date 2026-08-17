@@ -99,6 +99,21 @@ Most people who lose lose because they were never taught — they were sold. Tra
 ### "Is this just another online course?"
 A course is videos and a certificate. Reality FX is a **pipeline with proof**: structured curriculum, machine-graded assessments, a practice arena with live prices, machine-graded challenges, and a measurable track record you build yourself. If it were just a course, we wouldn't have built the machine that audits the machine.
 
+### "Is your certificate really worth anything? It's not government-accredited, is it?"
+Honest answer: no — Reality FX is not a government-accredited university, and we don't pretend to be one. But ask the question the other way round: **what actually gives any certificate its value?**
+
+Not the paper. Not the frame. Not the government logo. The paper itself has almost no intrinsic value — a driver's licence isn't valuable because the plastic is expensive; it is valuable because it communicates that the holder satisfied a defined standard for operating a vehicle. The credential is valuable because of what it **represents**.
+
+There are two kinds of credentials. One proves **completion** — *"I sat through this academic programme."* The other communicates **demonstrated competency** — *"I can perform this specific skill to this specific standard."* A university degree is mostly the first kind, and it has real value for real reasons. An RFX certificate is the second kind, and it means something very specific:
+
+> *"This person did not simply attend classes. They were trained, assessed, tested, challenged, and required to demonstrate competence to Reality FX's standard — and a machine, not a mood, graded that demonstration."*
+
+So when someone asks "is it recognised?", the right question back is **"recognised for what?"** As an academic qualification? No — RFX doesn't claim to be a university. As a government-issued professional licence? No — RFX doesn't claim to be a regulator. As a credential proving that someone completed RFX's own professional trading-competency standard? **That is exactly what it is.**
+
+Government recognition and market recognition are not the same thing. A government can recognise that an institution exists; a market recognises what a standard *produces*; and ultimately **performance establishes credibility** — not ink. The certificate does not make the trader — the process does. The certificate is simply the physical evidence of the journey: they learned, practised, made mistakes, were corrected, developed risk discipline, and demonstrated competence. If that person then trades professionally, manages capital, teaches, or builds a business from what they learned, the certificate acquires something no accreditation body can manufacture by itself: **lived economic meaning**.
+
+Our long-term goal is not to convince anyone that the certificate is valuable. It is to build a standard so rigorous that people stop needing convincing. The day someone sees "RFX Certified Trader" and thinks *"oh, they went through THAT programme"* — that is the day the institution is real.
+
 ### "Can I practice before risking real money?"
 That's the entire point. The arena is simulation. You can place thousands of trades and never risk a cent — and the machine measures how you handle them.
 
@@ -146,6 +161,7 @@ Don't take our word for it. Take the architecture's: the system verifies identit
 | What are the challenges? | Machine-graded trading competitions that reward discipline, not luck. |
 | Can I win rewards? | Yes — real rewards for demonstrated skill, including financial boosts. |
 | How do I know it's secure? | The machine audits itself, verifies identity, protects data, and publishes results. |
+| Is the certificate accredited? | It's a competency credential, not a degree: it proves you met RFX's own trading standard, machine-graded — not that you sat through classes. |
 | What do I get at the end? | Certification, a measured track record, and the skills to trade or build a career. |
 | Is this for me if I know nothing? | Especially for you. That's the starting line the whole system is built for. |
 
