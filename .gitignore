@@ -21,6 +21,10 @@ netlify/functions/rfx-env.js
 .freebuff/tools/system-a-state.json
 .freebuff/tools/system-a-state.json.*
 .freebuff/tools/os-*.json
+# ...except the credential registry SEED — it is infrastructure (the audit
+# guards it, and a fresh checkout must be able to serve the /verify rail),
+# not runtime data. The activity log stays ignored: lookups are runtime.
+!.freebuff/tools/os-credentials.json
 .freebuff/tools/os-*.json.*.bak
 .freebuff/tools/os-*.json.*.tmp
 .freebuff/tools/os-*.json.lock

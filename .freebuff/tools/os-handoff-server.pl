@@ -219,6 +219,49 @@ sub log_data_request {
   return $req;
 }
 
+# --- Credential registry (the /verify rail) ---
+# The public verification page reads this store (GET /os/api/credentials) and
+# logs every lookup outcome (POST /os/api/credentials/activity) so verification
+# activity is auditable without ever storing the scanner's identity. The
+# registry itself is seeded with the desk sample + a demo REVOKED record; real
+# credentials are minted via the Phase 2 admin console once the Academy opens.
+sub credentials_file { my $s = $stateFile; $s =~ s/handoffs\.json$/credentials.json/; return $s; }
+sub load_credentials {
+  my $f = credentials_file();
+  return [] unless -f $f;
+  open my $fh, '<:raw', $f or return [];
+  my $raw = do { local $/; <$fh> };
+  close $fh;
+  my $j = eval { JSON::PP->new->utf8->decode($raw) };
+  return ($j && ref($j) eq 'HASH' && ref($j->{credentials}) eq 'ARRAY') ? $j->{credentials} : [];
+}
+sub cred_activity_file { my $s = $stateFile; $s =~ s/handoffs\.json$/cred-activity.json/; return $s; }
+sub load_cred_activity {
+  my $f = cred_activity_file();
+  return [] unless -f $f;
+  open my $fh, '<:raw', $f or return [];
+  my $raw = do { local $/; <$fh> };
+  close $fh;
+  return eval { JSON::PP->new->utf8->decode($raw) } || [];
+}
+sub save_cred_activity {
+  my ($list) = @_;
+  return atomic_write(cred_activity_file(), JSON::PP->new->utf8->canonical->pretty->encode($list));
+}
+sub log_cred_activity {
+  my ($pl) = @_;
+  my $rec = {
+    id      => substr($pl->{id} || '', 0, 40),
+    outcome => substr($pl->{outcome} || 'LOOKUP', 0, 16),
+    at      => time(),
+  };
+  my $list = load_cred_activity();
+  push @$list, $rec;
+  if (@$list > 2000) { @$list = splice(@$list, -2000); }
+  save_cred_activity($list);
+  return $rec;
+}
+
 # --- Live Rooms store (Live Studio broadcasts: mentor lessons + staff meetings) ---
 sub rooms_file { my $s = $stateFile; $s =~ s/handoffs\.json$/rooms.json/; return $s; }
 sub load_rooms {
@@ -419,6 +462,29 @@ sub serve {
     # rail is not configured, so the receipt stays 'pending' — the board and
     # the reference number are the receipt, exactly like the demo-code flow.
     resp_json($c, 200, { ok => JSON::PP::true, ref => $req->{ref}, kind => $req->{kind}, receiptEmail => 'pending' });
+    close $c; return;
+  }
+  # --- Credential verification rail (the /verify page) ---
+  # GET serves the registry (VALID / REVOKED records); POST logs a lookup
+  # outcome for audit. No scanner identity is ever stored — only the
+  # credential ID, the outcome, and the time.
+  if ($method eq 'OPTIONS' && $clean eq '/os/api/credentials/activity') {
+    resp_json($c, 204, {});
+    close $c; return;
+  }
+  if ($method eq 'GET' && $clean eq '/os/api/credentials') {
+    resp_json($c, 200, { credentials => load_credentials() });
+    close $c; return;
+  }
+  if ($method eq 'POST' && $clean eq '/os/api/credentials/activity') {
+    my $body = read_body($c, $clen);
+    my $pl = eval { JSON::PP->new->utf8->decode($body) };
+    if (!$pl || !$pl->{id}) {
+      resp_json($c, 400, { ok => JSON::PP::false, reason => 'id required' });
+      close $c; return;
+    }
+    log_cred_activity($pl);
+    resp_json($c, 200, { ok => JSON::PP::true });
     close $c; return;
   }
   if ($method eq 'GET' && $clean eq '/os/api/rooms') {

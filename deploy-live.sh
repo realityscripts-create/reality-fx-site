@@ -110,8 +110,17 @@ else
   cp -r REALITY-FOREX-TRADING-/os/css   "$STAGE/"
   cp -r REALITY-FOREX-TRADING-/os/js    "$STAGE/"
   cp -r REALITY-FOREX-TRADING-/os/assets "$STAGE/assets"   # 741 chapter slides — the OS loads them at runtime
+  cp -r REALITY-FOREX-TRADING-/os/verify.html "$STAGE/"    # the public /verify credential page
 fi
 cp _redirects "$STAGE/_redirects"
+# The credential verification rail: a scan of the certificate QR hits
+# /verify/<credential-id> and lands on the verify page. The rewrite target
+# differs per mode (OS at root vs OS under /os/), so it is appended here.
+if [ "$MODE" = "marketing" ]; then
+  printf '\n/verify/*  /os/verify.html?id=:splat  200\n' >> "$STAGE/_redirects"
+else
+  printf '\n/verify/*  /verify.html?id=:splat  200\n' >> "$STAGE/_redirects"
+fi
 # the PWA layer (manifest, service worker, install guide) rides every deploy,
 # and its _headers grants the worker site-wide scope (Service-Worker-Allowed: /)
 cp -r rfx-pwa "$STAGE/rfx-pwa"

@@ -785,6 +785,22 @@ exports.handler = async (event) => {
     return ok({ ok: true, ref: req.ref, kind: req.kind, receiptEmail: receiptEmail });
   }
 
+  // The credential verification rail — public /verify page reads the
+  // registry (VALID / REVOKED) and logs lookup outcomes. The registry is
+  // seeded via the Phase 2 admin console once the Academy opens; before
+  // that, every scan honestly returns NOT VERIFIED.
+  if (method === "GET" && path === "credentials") {
+    const rec = await blobGet("credentials", "registry");
+    return ok({ credentials: rec ? rec.value : [] });
+  }
+  if (method === "POST" && path === "credentials/activity") {
+    const pl = parseBody(event);
+    if (!pl || !pl.id) return bad("id required");
+    const ev = { id: String(pl.id).slice(0, 40), outcome: String(pl.outcome || "LOOKUP").slice(0, 16), at: nowSec() };
+    await mutate("credActivity", "log", (list) => { list.push(ev); return list.slice(-2000); });
+    return ok({ ok: true });
+  }
+
   if (method === "GET" && path === "rooms") return getRooms();
   if (method === "POST" && path === "rooms") return postRooms(parseBody(event));
   const roomActions = ["chat", "book", "booking", "wait", "admit", "request", "presence", "end"];

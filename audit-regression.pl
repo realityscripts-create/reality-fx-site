@@ -35,6 +35,7 @@ my $ROOT = ".";
 my $A    = "System-A-live";
 my $A2   = "Reality-Fx-Registration-and-Member-s-panel";
 my $OS   = "REALITY-FOREX-TRADING-/os";
+my $TOOLS = ".freebuff/tools";
 my $STATE = ".freebuff/tools/system-a-state.json";
 
 my @fails;
@@ -667,6 +668,48 @@ print "\n[22] Honours-wall honesty — no fabricated winners before launch\n";
        : fail("honours wall fabricated: " . join(", ", @hmiss)));
 }
 
+# ---------- 23. CREDENTIAL VERIFICATION RAIL (scan -> verify -> trust) ----------
+# The certificate QR encodes https://<domain>/verify/<credential-id>; this page
+# resolves it against the registry and shows VALID / REVOKED / NOT VERIFIED.
+# Guarded: the page exists with all three states + manual lookup, the demo
+# server and the production function both serve the registry and log lookups,
+# the deploy stages the page with the /verify/* rewrite, and the registry
+# store is seeded. If any link in the rail unwires, every scanned certificate
+# silently breaks — this section keeps the whole chain tripped.
+sec(23);
+print "\n[23] Credential verification rail — scan -> verify -> trust\n";
+{
+    open my $fh, "<", "$OS/verify.html" or do { fail("verify page missing: $OS/verify.html"); 0; };
+    if ($fh) {
+        local $/; my $vp = <$fh>; close $fh;
+        my @vmiss;
+        push @vmiss, "valid state"    unless $vp =~ /Verified credential/ && $vp =~ /renderValid\(/;
+        push @vmiss, "not-verified"   unless $vp =~ /Credential not verified/ && $vp =~ /renderMissing\(/;
+        push @vmiss, "revoked state"  unless $vp =~ /Credential revoked/ && $vp =~ /renderRevoked\(/;
+        push @vmiss, "manual lookup"  unless $vp =~ /id=\"lookupInput\"/ && $vp =~ /Verify another credential/;
+        push @vmiss, "registry fetch" unless $vp =~ /api\/credentials/;
+        push @vmiss, "student pii on page" if $vp =~ /student_email|student_phone|home address|password/i;
+        ok(!@vmiss ? "verify page: all three states + manual lookup + registry fetch, zero scanner-identity storage"
+           : fail("verify page missing: " . join(", ", @vmiss)));
+    }
+    open my $sh, "<", "$TOOLS/os-credentials.json" or die;
+    local $/; my $reg = <$sh>; close $sh;
+    ok($reg =~ /RFX-2026-10482/ && $reg =~ /VALID/ && $reg =~ /REVOKED/ ? "registry seeded: sample VALID + demo REVOKED record"
+       : fail("credential registry seed missing or incomplete"));
+    open my $fh2, "<", "$TOOLS/os-handoff-server.pl" or die;
+    local $/; my $srv = <$fh2>; close $fh2;
+    ok($srv =~ /\/os\/api\/credentials/ && $srv =~ /credentials\/activity/ ? "demo server serves registry + logs lookups"
+       : fail("demo server credentials rail missing"));
+    open my $fh3, "<", "netlify/functions/osapi.js" or die;
+    local $/; my $fn = <$fh3>; close $fh3;
+    ok($fn =~ /path === \"credentials\"/ && $fn =~ /credentials\/activity/ ? "production function serves registry + logs lookups"
+       : fail("production function credentials rail missing"));
+    open my $fh4, "<", "deploy-live.sh" or die;
+    local $/; my $dep = <$fh4>; close $fh4;
+    ok($dep =~ /verify\.html/ && $dep =~ /\/verify\/\*/ ? "deploy stages verify.html + the /verify/* rewrite"
+       : fail("deploy staging of the verify rail missing"));
+}
+
 # ---------- 17. LIVE PWA PROBE (the deployed site really carries the app) ----------
 # Gated by LIVE_PROBE=1 on purpose: verifying the LIVE site is a status
 # report, not a deploy gate — the first deploy after a bump would otherwise
@@ -726,6 +769,7 @@ if ($ENV{AUDIT_JSON}) {
       20 => [ "Icon tripwire",              "every ICONS reference resolves; unknown keys fall back to a neutral mark, never 'undefined'" ],
       21 => [ "Certificate print rail",      "Print certificate button -> certPageHTML from the live record -> A4-landscape standalone; popup-blocked fallback + matching print CSS" ],
       22 => [ "Honours-wall honesty",         "no fabricated graduates, summits or current-year winners before launch (the wall fills as the Academy grows)" ],
+      23 => [ "Credential verification rail",  "certificate QR -> /verify/<id> page: VALID / REVOKED / NOT VERIFIED + manual lookup, registry on server + function, deploy rewrite" ],
     );
     $meta{17} = [ "Live PWA probe (LIVE_PROBE=1)", "deployed site serves the manifest, sw scope header, install guide, matching stamp" ] if $ENV{LIVE_PROBE};
     for my $n (sort { $a <=> $b } keys %meta) {
