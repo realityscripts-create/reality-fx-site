@@ -724,6 +724,35 @@ print "\n[23] Credential verification rail — scan -> verify -> trust\n";
        : fail("Registry Console nav door missing"));
 }
 
+# ---------- 24. HIDDEN GEMS BONUS CHAPTER (the reveal rail) ----------
+sec(24);
+print "\n[24] The Hidden Accumulation — bonus chapter with elite sub-deck, reveals after all 13, before the exam, never counted in the 13\n";
+{
+    open my $fh, "<", "$OS/js/data.js" or die "can't read data.js";
+    local $/; my $d = <$fh>; close $fh;
+    ok($d =~ /const BONUS_CHAPTER = \{/ ? "bonus chapter defined in data.js" : fail("BONUS_CHAPTER missing from data.js"));
+    if ($d =~ /const BONUS_CHAPTER = \{(.*?)\n\};/s) {
+        my $blk = $1;
+        ok($blk =~ /bonus:\s*true/ ? "flagged bonus — excluded from the 13-chapter spine" : fail("bonus flag missing"));
+        ok($blk =~ /title:\s*"The Hidden Accumulation"/ ? "named The Hidden Accumulation" : fail("title not renamed"));
+        my ($nq) = $blk =~ /quiz:\s*\[(.*?)\n\s*\],/s;
+        my $qs = defined($nq) ? (() = $nq =~ /\{ q:/g) : 0;
+        if ($qs == 6) { ok("6-question base assessment present"); } else { fail("expected 6 base quiz questions, found $qs"); }
+        my ($nc) = $blk =~ /native:\s*\[(.*?)\]\s*,\s*\n\s*elite/s;
+        my $cards = defined($nc) ? (() = $nc =~ /\beyebrow:/g) : 0;
+        if ($cards >= 20) { ok("$cards base cards authored (pure card-native, no PDF)"); } else { fail("expected 20+ base cards, found $cards"); }
+        ok($blk =~ /elite:\s*\{/ ? "elite sub-deck present" : fail("elite sub-deck missing"));
+    }
+    open my $oh, "<", "$OS/js/os.js" or die;
+    local $/; my $os = <$oh>; close $oh;
+    ok($os =~ /chId === BONUS_CHAPTER\.id/ ? "lesson player resolves the bonus chapter" : fail("renderLesson bonus resolution missing"));
+    ok($os =~ /if \(ch\.bonus\) return CHAPTERS\.every\(isComplete\);/ ? "unlock gate: all 13 complete reveals it" : fail("bonus unlock gate missing"));
+    ok($os =~ /hidden-reveal/ && $os =~ /Enter The Accumulation/ ? "journey reveal node present (between ch13 and the exam)" : fail("journey reveal node missing"));
+    ok($os =~ /awardBadge\(ch, \"gem\"\)/ && $os =~ /Accumulator/ ? "Accumulator badge awarded on pass" : fail("gem badge award missing"));
+    ok($os =~ /CHAPTERS\.length \* 6/ ? "exam paper still 13 x 6 — the bonus never inflates it" : fail("exam count changed"));
+    ok(-f "$OS/assets/case/frame-1.png" && -f "$OS/assets/case/frame-2.png" ? "case-study receipts staged locally (local-only guarantee holds)" : fail("case screenshots missing"));
+}
+
 # ---------- 17. LIVE PWA PROBE (the deployed site really carries the app) ----------
 # Gated by LIVE_PROBE=1 on purpose: verifying the LIVE site is a status
 # report, not a deploy gate — the first deploy after a bump would otherwise
@@ -784,6 +813,7 @@ if ($ENV{AUDIT_JSON}) {
       21 => [ "Certificate print rail",      "Print certificate button -> certPageHTML from the live record -> A4-landscape standalone; popup-blocked fallback + matching print CSS" ],
       22 => [ "Honours-wall honesty",         "no fabricated graduates, summits or current-year winners before launch (the wall fills as the Academy grows)" ],
       23 => [ "Credential verification rail",  "QR -> /verify/<id> (VALID / REVOKED / NOT VERIFIED + manual lookup); Registry Console mints/revokes (founder-admin gated); register-on-issue; server + function + deploy wired" ],
+      24 => [ "The Hidden Accumulation",           "bonus chapter with elite sub-deck; card-native (no PDF); case-study receipts local; never counted in the 13; reveals after all 13, before the exam" ],
     );
     $meta{17} = [ "Live PWA probe (LIVE_PROBE=1)", "deployed site serves the manifest, sw scope header, install guide, matching stamp" ] if $ENV{LIVE_PROBE};
     for my $n (sort { $a <=> $b } keys %meta) {
