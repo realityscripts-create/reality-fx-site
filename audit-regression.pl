@@ -749,8 +749,30 @@ print "\n[24] The Hidden Accumulation — bonus chapter with elite sub-deck, rev
     ok($os =~ /if \(ch\.bonus\) return CHAPTERS\.every\(isComplete\);/ ? "unlock gate: all 13 complete reveals it" : fail("bonus unlock gate missing"));
     ok($os =~ /hidden-reveal/ && $os =~ /Enter The Accumulation/ ? "journey reveal node present (between ch13 and the exam)" : fail("journey reveal node missing"));
     ok($os =~ /awardBadge\(ch, \"gem\"\)/ && $os =~ /Accumulator/ ? "Accumulator badge awarded on pass" : fail("gem badge award missing"));
-    ok($os =~ /CHAPTERS\.length \* 6/ ? "exam paper still 13 x 6 — the bonus never inflates it" : fail("exam count changed"));
+    ok($os =~ /CHAPTERS\.length \* examQuestionsPerCh/ ? "exam paper tier-aware — bonus never inflates the 13-chapter count" : fail("exam count reference missing"));
     ok(-f "$OS/assets/case/frame-1.png" && -f "$OS/assets/case/frame-2.png" ? "case-study receipts staged locally (local-only guarantee holds)" : fail("case screenshots missing"));
+}
+
+# ---------- 25. Anti-piracy protection — 24h gate, 80% pass, quiz randomisation, rapid-progression detection ----------
+print "\n[25] Anti-piracy protection — 24h cooldown, 80% pass mark, quiz randomisation, rapid progression detection\n";
+{
+    open my $fh, "<", "$OS/js/data.js" or die "can't read data.js";
+    local $/; my $d = <$fh>; close $fh;
+    ok($d =~ /PASS_PCT\s*=\s*80/ ? "PASS_PCT is 80" : fail("PASS_PCT not 80"));
+
+    open my $oh, "<", "$OS/js/os.js" or die;
+    local $/; my $os = <$oh>; close $oh;
+    ok($os =~ /CHAPTER_COOLDOWN_MS/ ? "24h cooldown constant defined" : fail("CHAPTER_COOLDOWN_MS missing"));
+    ok($os =~ /24 \* 60 \* 60 \* 1000/ ? "cooldown is 24 hours" : fail("cooldown value wrong"));
+    ok($os =~ /prevSt\.completedAt.*Date\.now.*CHAPTER_COOLDOWN_MS/ ? "isUnlocked enforces 24h gate" : fail("24h gate not enforced in isUnlocked"));
+    ok($os =~ /chapterCooldownLeft/ ? "cooldown display helper present" : fail("chapterCooldownLeft missing"));
+    ok($os =~ /completedAt.*Date\.now.*24h cooldown anchor/ ? "completedAt stamped on pass" : fail("completedAt not stamped"));
+    ok($os =~ /shuf\(activeCh\.quiz\)/ ? "quiz questions shuffled per sitting" : fail("quiz shuffle missing"));
+    ok($os =~ /perm\.indexOf\(q\.answer\)/ ? "answer choices shuffled per question" : fail("answer shuffle missing"));
+    ok($os =~ /rapid-progression/ ? "rapid progression detection present" : fail("rapid-progression flag missing"));
+    ok($os =~ /recentPasses >= 3/ ? "threshold is 3 chapters in 60 minutes" : fail("rapid threshold wrong"));
+    ok($os =~ /one chapter per day/ ? "journey subtitle mentions one chapter per day" : fail("journey subtitle not updated"));
+    ok($os =~ /Unlocks in.*fmtDur/ ? "locked chapter shows cooldown countdown" : fail("cooldown countdown not shown"));
 }
 
 # ---------- 17. LIVE PWA PROBE (the deployed site really carries the app) ----------

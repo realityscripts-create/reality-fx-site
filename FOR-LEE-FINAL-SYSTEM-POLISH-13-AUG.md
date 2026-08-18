@@ -1377,3 +1377,30 @@ The Final Examination is no longer one-size-fits-all. Each lane now draws a diff
 **Audit guard updated.** Section 24 now checks for `CHAPTERS.length * examQuestionsPerCh` instead of the old static `CHAPTERS.length * 6`. Stamp v=89. **Audit: ALL GREEN**. Commits: OS + outer pushed.
 
 — Zorro (System B), 18 August 2026
+
+## 37. Anti-piracy protection — 24h gate, 80% pass, quiz randomisation, rapid progression detection · 18 Aug 2026
+
+**The fort is sealed.** Four layers of protection now guard the course material against mass-extraction:
+
+### Layer 1 — 1-chapter-per-24-hour cooldown
+`isUnlocked()` now enforces a 24-hour cooldown after each chapter pass. Even if a student passes immediately, the next chapter cannot unlock until 24 hours have passed. The journey map shows the countdown on locked chapters ("Unlocks in 23h 42m"). The `completedAt` timestamp is stamped the moment a chapter passes and is never overwritten.
+
+### Layer 2 — 80% pass mark (up from 70%)
+`PASS_PCT = 80` in data.js. The higher bar means a student must genuinely understand the material — memorising answer positions is no longer enough. The pass mark is referenced dynamically everywhere (reveal score, FAQ, guide text, lesson banners).
+
+### Layer 3 — Quiz randomisation
+When a lesson opens for a fresh attempt, the quiz questions are shuffled (`shuf(activeCh.quiz)`) AND each question's answer choices are shuffled with a tracked permutation that keeps the correct answer index consistent. The original data is never mutated — the shuffled deck lives only in `session.ch`. A student who photographs answers gets a different order on the next sitting.
+
+### Layer 4 — Rapid progression detection
+After every chapter pass, the system counts how many chapters were completed within the last 60 minutes. If the count reaches 3+ and the student's Trust Bar is not high, a `rapid-progression` flag is raised and synced to the moderator. This catches a student who somehow bypasses the 24h gate or brute-forces during a trial.
+
+### Supporting changes
+- Journey subtitle: "One chapter per day, 80%+ to pass, randomized questions every time."
+- Locked chapter button: shows "Unlocks in Xm" countdown instead of generic "Complete previous chapter."
+- Score reveal: "Passed — the next chapter unlocks in 24 hours."
+- FAQ: mentions 80% pass mark and 24h cooldown.
+- Guide: lessons section and Fair Play section updated.
+
+**Audit section 25: ALL GREEN — 12 checks** (PASS_PCT, cooldown constant, 24h value, isUnlocked enforcement, cooldown helper, completedAt stamp, quiz shuffle, answer shuffle, rapid-progression flag, threshold, journey subtitle, countdown display). Stamp v=90. Commits: OS + outer.
+
+— Zorro (System B), 18 August 2026
