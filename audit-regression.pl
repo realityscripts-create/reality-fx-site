@@ -753,12 +753,12 @@ print "\n[24] The Hidden Accumulation — bonus chapter with elite sub-deck, rev
     ok(-f "$OS/assets/case/frame-1.png" && -f "$OS/assets/case/frame-2.png" ? "case-study receipts staged locally (local-only guarantee holds)" : fail("case screenshots missing"));
 }
 
-# ---------- 25. Anti-piracy protection — 24h gate, 80% pass, quiz randomisation, rapid-progression detection ----------
-print "\n[25] Anti-piracy protection — 24h cooldown, 80% pass mark, quiz randomisation, rapid progression detection\n";
+# ---------- 25. Institutional pacing — 24h gate, quiz randomisation, rapid-progression detection ----------
+print "\n[25] Institutional pacing — 24h cooldown, quiz randomisation, rapid progression detection\n";
 {
     open my $fh, "<", "$OS/js/data.js" or die "can't read data.js";
     local $/; my $d = <$fh>; close $fh;
-    ok($d =~ /PASS_PCT\s*=\s*80/ ? "PASS_PCT is 80" : fail("PASS_PCT not 80"));
+    ok($d =~ /PASS_PCT\s*=\s*70/ ? "PASS_PCT is 70" : fail("PASS_PCT not 70"));
 
     open my $oh, "<", "$OS/js/os.js" or die;
     local $/; my $os = <$oh>; close $oh;
@@ -772,7 +772,7 @@ print "\n[25] Anti-piracy protection — 24h cooldown, 80% pass mark, quiz rando
     ok($os =~ /rapid-progression/ ? "rapid progression detection present" : fail("rapid-progression flag missing"));
     ok($os =~ /recentPasses >= 3/ ? "threshold is 3 chapters in 60 minutes" : fail("rapid threshold wrong"));
     ok($os =~ /one chapter per day/ ? "journey subtitle mentions one chapter per day" : fail("journey subtitle not updated"));
-    ok($os =~ /Unlocks in.*fmtDur/ ? "locked chapter shows cooldown countdown" : fail("cooldown countdown not shown"));
+    ok($os =~ /Opens in.*fmtDur/ ? "locked chapter shows cooldown countdown" : fail("cooldown countdown not shown"));
 }
 
 # ---------- 17. LIVE PWA PROBE (the deployed site really carries the app) ----------
