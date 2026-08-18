@@ -1360,4 +1360,20 @@ A department intro states the scoring basis explicitly: profitability, risk mana
 
 **Local-only guarantee holds.** Case study screenshots staged in `os/assets/case/` (frame-1.png = thesis chart, frame-2.png = positions table). The server, the deploy, and the audit all guard local-only. Stamp v=88. **Audit section 24: ALL GREEN — 11 checks** (bonus chapter defined, renamed, flagged, 6 quiz Qs, 26 base cards, elite sub-deck, lesson resolution, unlock gate, journey node, Accumulator badge, exam untouched, case receipts local). Commits: OS + outer pushed.
 
+## 36. Tier-aware Final Examination — Elite gets the full gauntlet · 18 Aug 2026
+
+The Final Examination is no longer one-size-fits-all. Each lane now draws a different depth of assessment:
+
+| Lane | Questions/chapter | Total questions | Time limit |
+| --- | --- | --- | --- |
+| Standard | 6 | 78 | 2h 30m (150 min) |
+| Challenging | 7 | 91 | 3h 00m (180 min) |
+| Elite | 8 | 104 | 3h 30m (210 min) |
+
+**How it works.** `examQuestionsPerCh()` and `examMinutes()` are dynamic helpers that read the current tier. `buildExamPaper()` slices each chapter's shuffled deck to the tier's per-chapter count. The exam intro, rules text, capstone node stats, and deadline are all derived from these helpers — nothing is hardcoded. A locked exam preserves its original deadline (stored in `finalExamRun.minutes`).
+
+**The exam gate text** dynamically shows "Six/Seven/Eight questions per chapter" and the correct time for the student's lane. Elite students face 104 questions across 3.5 hours — a genuine endurance test that matches the depth of their training.
+
+**Audit guard updated.** Section 24 now checks for `CHAPTERS.length * examQuestionsPerCh` instead of the old static `CHAPTERS.length * 6`. Stamp v=89. **Audit: ALL GREEN**. Commits: OS + outer pushed.
+
 — Zorro (System B), 18 August 2026
