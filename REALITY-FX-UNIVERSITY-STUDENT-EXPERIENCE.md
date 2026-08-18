@@ -57,8 +57,9 @@ The Reality FX Trading Academy OS is the online campus where everything happens.
 - **Dashboard** — your mission control: progress, accuracy, the rings showing where you are, what's next.
 - **The Journey** — a map of the full curriculum, chapter by chapter, lane by lane.
 - **13 chapters · three difficulty lanes** — every chapter exists in **Standard** (learn the core), **Challenging** (everything in Standard + the drill field, deeper scenarios), and **Elite** (the most information — market structure, CHOCH, BOS, advanced psychology). Standard ~774 slides, Challenging ~847, Elite ~1065. That's real depth — and it keeps growing.
-- **Assessments, not quizzes** — every chapter is machine-assessed. You need genuine understanding to pass, and your accuracy follows you.
-- **Performance & Fair Play** — the system watches how you learn. Finish quickly and honestly with a high trust bar, and you get recognized. Act out of the norm, and the whistle-blowers take a look. The trust bar is your hall pass — earned by honest work.
+- **Assessments, not quizzes** — every chapter is machine-assessed at 70% to pass. You need genuine understanding to progress.
+- **Institutional pacing** — after completing a chapter, the next one opens in 24 hours. No school lets you sit Term 1, 2, 3 and 4 assessments in one afternoon. The cooling period is where the material settles — research shows spaced learning beats massed practice by 20–40% on retention. Randomised questions prevent answer-key extraction.
+- **Performance & Fair Play** — the system watches how you learn. Response times, tab-switching, rapid progression across chapters — all monitored. The Trust Bar is your hall pass, earned by honest work.
 - **Certification** — complete all 13 chapters and you earn the Reality FX certification.
 - **The Academy Vault** — your resources. **The Laboratory** — experiments and deeper tools. **The AI Mentor** — help when you need it.
 
@@ -156,12 +157,13 @@ Don't take our word for it. Take the architecture's: the system verifies identit
 | What is Reality FX? | A digital trading education institution — an ecosystem, not a course. |
 | Why did you build it? | Because trading education was teaching people to gamble, not to trade. |
 | How is it different? | Learn → Practice → Replay → Trade → Measure → Improve, with proof at every step. |
-| What is the OS? | Your digital campus: 13 chapters, 3 lanes, assessments, arena, challenges, journal, Hall of Fame. |
+| What is the OS? | Your digital campus: 13 chapters, 3 lanes, institutional pacing (one chapter per day), machine-graded assessments, arena, challenges, journal, Hall of Fame. |
 | Do I risk money? | Never inside the OS. The arena is simulation by design. |
 | What are the challenges? | Machine-graded trading competitions that reward discipline, not luck. |
 | Can I win rewards? | Yes — real rewards for demonstrated skill, including financial boosts. |
 | How do I know it's secure? | The machine audits itself, verifies identity, protects data, and publishes results. |
 | Is the certificate accredited? | It's a competency credential, not a degree: it proves you met RFX's own trading standard, machine-graded — not that you sat through classes. |
+| Why can't I do multiple chapters in one day? | Institutional pacing. Every credible education institution spaces its curriculum. The 24-hour cooling period between chapters lets the material consolidate — research shows this improves long-term retention by 20–40%. |
 | What do I get at the end? | Certification, a measured track record, and the skills to trade or build a career. |
 | Is this for me if I know nothing? | Especially for you. That's the starting line the whole system is built for. |
 
