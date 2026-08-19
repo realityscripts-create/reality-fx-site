@@ -1445,7 +1445,7 @@ These are non-negotiable before go-live:
 
 **H2 — Token Protection:** Short-lived one-time auth code preferred. If JWT: HTTPS only, 5-min expiry, single-use, removed from URL immediately via `history.replaceState`, NEVER stored in localStorage, NEVER logged.
 
-**H3 — Auth ≠ Trust (Structurally Enforced):** A valid token proves identity, NOT that the OS should accept all local values as authoritative. The `S.handoff.founder → 100%` fallback is **DEV-ONLY** (gated by `IS_DEV = location.hostname === "localhost"`). In production, this code path is **structurally dead**. A forged `S.handoff.founder=true` in localStorage produces nothing. This is not an intention — it is a structural guarantee.
+**H3 — Auth ≠ Trust (Structurally Enforced):** A valid token proves identity, NOT that the OS should accept all local values as authoritative. The `S.handoff.founder → 100%` fallback is **DEV-ONLY** (gated by `IS_DEV = location.hostname === "localhost"`). In production, this code path is **structurally dead**. A forged `S.handoff.founder=true` in localStorage produces nothing. Additionally, a `TRUST_VERIFIED` flag gates ALL trust UI — `standingCard()`, `trustHigh()`, and the Founder's Circle badge all require `TRUST_VERIFIED === true` before rendering any score. This flag is ONLY set by `fetchTrust()` (when the academy server returns valid enrollment data) or `initTrustFromHandoff()` (dev-only). **Production trust can ONLY originate from verified System A authentication.** This is not an intention — it is a structural guarantee.
 
 **H4 — Separate Objects:** AUTHENTICATED IDENTITY (from token) ≠ OS SESSION (created after validation). Restarting OS does not create new identity. Expired token does not corrupt study time.
 

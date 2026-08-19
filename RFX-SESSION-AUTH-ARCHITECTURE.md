@@ -512,19 +512,29 @@ Verified System A token
 
 The `S.handoff.founder → 100%` fallback is **DEV-ONLY** (gated by `IS_DEV = location.hostname === "localhost"`). In production, this code path is **structurally dead** — the OS will never trust a local founder flag. A forged `S.handoff.founder=true` in localStorage produces nothing.
 
+Additionally, a `TRUST_VERIFIED` flag gates ALL trust UI. `standingCard()`, `trustHigh()`, and the Founder's Circle badge all require `TRUST_VERIFIED === true` before rendering any score. This flag is ONLY set by:
+1. `fetchTrust()` — when the academy server returns valid enrollment trust data
+2. `initTrustFromHandoff()` — dev-only (inside `if (IS_DEV)`)
+
+**Production trust can ONLY originate from verified System A authentication.**
+
 ```
 DEV (localhost):
   IS_DEV = true
   founder fallback → allowed (for development/testing)
+  TRUST_VERIFIED set by initTrustFromHandoff()
 
 PRODUCTION (any real domain):
   IS_DEV = false
   founder fallback → structurally impossible
-  no verified token → DEMO / UNAUTHENTICATED
-  forged S.handoff.founder → ignored
+  initTrustFromHandoff() → skipped entirely
+  TRUST_VERIFIED stays false until fetchTrust() succeeds
+  no verified token → TRUST = null, TRUST_VERIFIED = false → DEMO
+  forged S.handoff.trust.score → ignored (TRUST_VERIFIED = false)
+  forged S.handoff.founder → ignored (IS_DEV = false)
 ```
 
-This is not an "intention" — it is a structural guarantee. The `IS_DEV` flag is evaluated at module load time and cannot be modified by the student.
+This is not an "intention" — it is a structural guarantee. The `IS_DEV` flag is evaluated at module load time and cannot be modified by the student. `TRUST_VERIFIED` is only set through verified code paths.
 
 ### 30.4 — OS Session as a Separate Object
 
