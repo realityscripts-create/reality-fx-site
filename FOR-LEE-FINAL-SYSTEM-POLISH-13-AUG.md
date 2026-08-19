@@ -1472,6 +1472,25 @@ Response: {
 }
 ```
 
+### OS-Side Auth Gate (v112 — Implemented)
+
+The OS now has the auth gate in `os.js`. Lee's side is the `/api/verify-token` endpoint on System A.
+
+**OS-side implementation:**
+- `rfxAuthGate()` captures `?token=...` from URL, calls `/api/verify-token`, populates `S.handoff` from verified claims, creates OS session, scrubs URL
+- `AUTH` object separates authentication state from OS session state
+- `OS_SESSION` object tracks the study session (created AFTER auth)
+- `TRUST_VERIFIED` is ONLY set inside `rfxAuthGate()`'s success path
+- `wireOsLogout()` clears AUTH + TRUST + OS_SESSION on logout (Attack G)
+
+**Lee must build on System A side:**
+1. Generate signing keys (RS256 or EdDSA)
+2. Build `POST /api/verify-token` endpoint
+3. Token claims: sub, name, founder, status, permissions, iat, exp, jti, iss, aud, kid
+4. Validate: signature, expiry, iss, aud, jti replay check
+5. Return verified identity + trust data
+6. On student login → generate short-lived token → redirect to `/os/?token=...`
+
 ### Regression Test Matrix (Phase 4)
 
 - [ ] Founder authenticates → 100% Excellent

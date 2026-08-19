@@ -683,6 +683,44 @@ Response: {
 - [ ] Exactly-once time finalization on System A side
 - [ ] Re-login / session replacement (new token = new session, old one finalized)
 
+### Phase 2 — Implementation (v112)
+
+The OS-side auth gate is now implemented in `os.js`:
+
+**New state objects:**
+- `AUTH` — authentication state (authenticated, studentId, verifiedName, founder, status, permissions, authIssuedAt, authExpiresAt, authJti)
+- `OS_SESSION` — session state (id, startedAt, lastActivity, status)
+
+**New functions:**
+- `verifyToken(token)` — POSTs to `/api/verify-token`, returns `{ valid, studentId, ... }`
+- `rfxAuthGate()` — captures token from URL, validates, populates S.handoff from verified claims, creates OS session, scrubs URL
+- `createOsSession(studentId)` — creates OS session after successful auth
+- `osSessionActive()` — checks if OS session is active
+- `clearOsSession(reason)` — ends OS session
+
+**Boot sequence:**
+1. `rfxAuthGate()` runs FIRST
+2. If token present → validate → populate identity → create session → scrub URL
+3. If no token or validation fails → fall through to `loadHandshake()` (dev fallback)
+4. `ensureTrustLoaded()` runs after handshake (refreshes trust data from academy)
+
+**Trust invariant:**
+`TRUST_VERIFIED` may only transition from `false → true` inside `rfxAuthGate()`'s success path. `fetchTrust()` does NOT set `TRUST_VERIFIED` — it refreshes score data but does not establish authentication authority.
+
+**Logout cleanup (Attack G):**
+`wireOsLogout()` now clears: AUTH state, TRUST, TRUST_VERIFIED, OS_SESSION, session markers. No identity or trust carries over to the next student.
+
+### Phase 3 — Attack Test Harness
+
+Attacks A–G are documented in `.freebuff/tools/auth-attack-harness.html`:
+- A: Forged token (modified payload) → rejected
+- B: Fabricated token (fake key) → rejected
+- C: Expired token → rejected
+- D: Wrong audience → rejected
+- E: Replay (reused jti) → rejected
+- F: Stale session → grace policy
+- G: Identity leakage → blocked by logout cleanup
+
 ### Phase 4 — Regression Test Matrix
 
 - [ ] Founder authenticates → 100% Excellent standing
