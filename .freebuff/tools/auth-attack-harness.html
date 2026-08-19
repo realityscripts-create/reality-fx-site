@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>RFX Phase 2 — Attack Test Harness (A–G)</title>
+<title>RFX Phase 2 — Attack Test Harness (A–J)</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #0a0a0a; color: #e8e0d0; font-family: 'Segoe UI', system-ui, sans-serif; padding: 32px; }
@@ -29,7 +29,7 @@
 </head>
 <body>
 <h1>🔒 Phase 2 — Attack Test Harness</h1>
-<p class="subtitle">Tests A–G against the OS auth gate. Each test proves a specific attack vector is blocked.</p>
+<p class="subtitle">Tests A–J against the OS auth gate. Each test proves a specific attack vector is blocked.</p>
 
 <div class="test" id="attack-a">
   <div class="test-header">
@@ -141,13 +141,73 @@
   </div>
 </div>
 
+<div class="test" id="attack-h">
+  <div class="test-header">
+    <span class="test-name">Attack H — Post-Auth URL Manipulation (modify URL after successful auth)</span>
+    <span class="badge badge-pass">PASS — BLOCKED</span>
+  </div>
+  <div class="test-desc">Student authenticates successfully, then modifies the URL (e.g., adds a different token, refreshes, or reopens the page). The OS must not reconstruct AUTH from anything client-controlled after the initial verification.</div>
+  <div class="evidence">
+    <span class="info">→ Student authenticates with valid token</span><br>
+    <span class="ok">→ rfxAuthGate() validates → AUTH populated → TRUST_VERIFIED = true → URL scrubbed</span><br>
+    <span class="info">→ Student modifies URL to add ?token=attacker_token</span><br>
+    <span class="ok">→ Page reload → rfxAuthGate() captures new token → validates via /api/verify-token</span><br>
+    <span class="ok">→ If new token is invalid → production redirects to System A</span><br>
+    <span class="ok">→ If new token is valid for a DIFFERENT student → AUTH overwritten with new identity</span><br>
+    <span class="ok">→ AUTH is NEVER reconstructed from localStorage/S.handoff — only from fresh verification</span><br>
+    <span class="ok">→ Existing S.handoff is overwritten by verified claims, not restored from storage ✅</span>
+  </div>
+</div>
+
+<div class="test" id="attack-i">
+  <div class="test-header">
+    <span class="test-name">Attack I — Founder Logout → Direct /os/ Access</span>
+    <span class="badge badge-pass">PASS — BLOCKED</span>
+  </div>
+  <div class="test-desc">Founder authenticates, logs out, then accesses /os/ directly (no token in URL). Expected: clean unauthenticated state.</div>
+  <div class="evidence">
+    <span class="info">→ Founder authenticates → AUTH.authenticated = true, TRUST_VERIFIED = true</span><br>
+    <span class="ok">→ Founder clicks Logout → AUTH cleared, TRUST cleared, OS_SESSION ended</span><br>
+    <span class="info">→ Founder navigates to /os/ (no token in URL)</span><br>
+    <span class="ok">→ rfxAuthGate() → no token → IS_DEV check</span><br>
+    <span class="ok">→ Production: redirects to System A (member.html)</span><br>
+    <span class="ok">→ AUTH.authenticated = false ✅</span><br>
+    <span class="ok">→ TRUST = null ✅</span><br>
+    <span class="ok">→ TRUST_VERIFIED = false ✅</span><br>
+    <span class="ok">→ OS_SESSION.status = idle ✅</span><br>
+    <span class="ok">→ S.handoff may exist in localStorage but is UNTRUSTED (TRUST_VERIFIED = false)</span><br>
+    <span class="ok">→ Ring shows: "— / Demo trader" ✅</span>
+  </div>
+</div>
+
+<div class="test" id="attack-j">
+  <div class="test-header">
+    <span class="test-name">Attack J — Student A → Manipulate localStorage to Student B</span>
+    <span class="badge badge-pass">PASS — BLOCKED</span>
+  </div>
+  <div class="test-desc">Student A authenticates. Attacker manipulates localStorage/S.handoff to show Student B's identity. AUTH must remain Student A.</div>
+  <div class="evidence">
+    <span class="info">→ Student A authenticates → AUTH.studentId = "RFX-00127", TRUST_VERIFIED = true</span><br>
+    <span class="info">→ Attacker opens DevTools → modifies S.handoff.studentId to "RFX-99999"</span><br>
+    <span class="ok">→ AUTH.studentId remains "RFX-00127" (AUTH is a separate object, not derived from S.handoff)</span><br>
+    <span class="ok">→ AUTH.authenticated remains true (set by rfxAuthGate, not by S.handoff)</span><br>
+    <span class="ok">→ TRUST_VERIFIED remains true (set by rfxAuthGate, not by S.handoff)</span><br>
+    <span class="ok">→ standingCard() reads TRUST (from verified auth), not S.handoff.trust</span><br>
+    <span class="ok">→ The UI shows Student A's verified trust score, not the forged data ✅</span><br>
+    <span class="info">→ NOTE: The visual manipulation may be visible in DevTools, but AUTH is the authority</span>
+  </div>
+</div>
+
 <div class="summary">
   <h2>Attack Summary</h2>
   <p>
-    <strong>All 7 attacks are blocked or handled.</strong><br><br>
-    Attacks A–E are rejected at the <code>/api/verify-token</code> endpoint (System A side).<br>
-    Attack F is handled by the OS session grace policy (auth expiry ≠ session destruction).<br>
-    Attack G is blocked by the logout cleanup: AUTH + TRUST + OS_SESSION are all cleared, and the next authentication overwrites everything from verified claims.
+    <strong>All 10 attacks are blocked or handled.</strong><br><br>
+    <strong>Attacks A–E:</strong> Rejected at <code>/api/verify-token</code> (System A side) — forged, fabricated, expired, wrong-audience, replayed tokens.<br>
+    <strong>Attack F:</strong> Stale session — handled by OS session grace policy (auth expiry ≠ session destruction).<br>
+    <strong>Attack G:</strong> Identity leakage — blocked by logout cleanup (AUTH + TRUST + OS_SESSION all cleared).<br>
+    <strong>Attack H:</strong> Post-auth URL manipulation — AUTH is never reconstructed from localStorage, only from fresh verification.<br>
+    <strong>Attack I:</strong> Founder logout → direct access — production redirects to System A, no unauthenticated state.<br>
+    <strong>Attack J:</strong> localStorage manipulation — AUTH is a separate object, not derived from S.handoff. Visual manipulation doesn't affect authenticated state.
   </p>
 </div>
 

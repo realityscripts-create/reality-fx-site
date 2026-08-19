@@ -623,32 +623,58 @@ Two different states must be distinguished:
 }
 ```
 
-### 31.2 — Verification Endpoint
+### 31.2 — Verification Endpoint (Deterministic Contract)
 
-```
-POST /api/verify-token
-Body: { token: "<jwt>" }
-Response: {
-  valid: true,
-  studentId: "RFX-00127",
-  verifiedName: "Leeroy Chirwa",
-  founder: true,
-  status: "ACTIVE",
-  trust: { score: 95, restricted: false },
-  printTrust: "trusted",
-  enrolled: [1,2,3,4,5,6,7,8,9,10,11,12,13]
+The `/api/verify-token` response must be deterministic. The OS must be able to distinguish three fundamentally different states: **"not authenticated"**, **"authenticated but not permitted"**, and **"System A temporarily unavailable"**.
+
+**Success (200):**
+```json
+{
+  "authenticated": true,
+  "identity": {
+    "studentId": "RFX-00127",
+    "verifiedName": "Leeroy Chirwa",
+    "founder": true,
+    "status": "ACTIVE",
+    "permissions": null
+  },
+  "trust": {
+    "score": 95,
+    "restricted": false
+  },
+  "token": {
+    "issuedAt": 1692453600,
+    "expiresAt": 1692453900,
+    "jti": "unique-token-id"
+  }
 }
 ```
 
-### 31.3 — Error Responses
+**Deterministic Failure Classes:**
 
-| Scenario | Response |
-|---|---|
-| Expired token | `{ valid: false, error: "expired" }` |
-| Forged/malformed token | `{ valid: false, error: "invalid" }` |
-| Revoked token | `{ valid: false, error: "revoked" }` |
-| Wrong student | `{ valid: false, error: "identity_mismatch" }` |
-| System A down | OS enters degraded state, retains existing session |
+| HTTP | Meaning | OS behavior |
+|---|---|---|
+| **400** | Malformed request / missing token | Redirect to System A |
+| **401** | Invalid / expired / rejected credential | Redirect to System A |
+| **403** | Valid identity but not permitted to access OS | Show "not authorized" message |
+| **409** | Replay — jti already consumed | Redirect to System A |
+| **500/503** | System A verification service unavailable | Degraded state (retain existing session, show warning) |
+
+The OS must handle all five classes. The critical distinction: 401 means **"you are not authenticated"**, 403 means **"you are authenticated but not permitted"**, and 500/503 means **"we cannot verify right now"** — three fundamentally different states.
+
+### 31.3 — Credential Lifecycle (Raw Token)
+
+The raw token is a **credential**, not application state.
+
+1. Captured from URL (`?token=...`)
+2. Sent to `/api/verify-token` for validation
+3. **Scrubbed from URL immediately** via `history.replaceState()`
+4. **NEVER stored in `localStorage`**
+5. **NEVER stored in `S.handoff`** (handoff is populated from the verified *response*, not the token)
+6. **NEVER logged or rendered**
+7. Browser history ends at `/os/` — no credential in history
+
+The token is used once and discarded. The verified response becomes the authoritative identity.
 
 ---
 
