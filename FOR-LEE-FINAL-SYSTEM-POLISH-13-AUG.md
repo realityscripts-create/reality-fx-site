@@ -1522,7 +1522,15 @@ When a student logs in through System A and requests OS access:
 | `iss` | string | Must be `realityfx` |
 | `aud` | string | Must be `rfx-os` |
 
-**Token lifetime:** maximum **5 minutes**. This is an authentication handoff, not a persistent session credential.
+**Token lifetime:** maximum **5 minutes**. This is an authorization credential, not the OS session.
+
+**Critical distinction:** The 5-minute JWT proves System A authorized the launch. It is NOT the student's ongoing session credential. Once the OS validates the token, the token becomes irrelevant to the student's study experience. The OS session (managed by `OS_SESSION`) governs ongoing activity. The student does not carry the launch token around while studying.
+
+```
+System A login → 5-minute signed launch token → OS verifies it
+→ AUTH established → OS_SESSION created → token becomes irrelevant
+→ heartbeat maintains session validity
+```
 
 3. System A redirects the student to:
 ```
@@ -1743,7 +1751,8 @@ app.get('/open-os', requireAuth, async (req, res) => {
   // Generate the token
   const token = generateOsToken(enrollment);
 
-  // Record the jti for replay protection
+  // Record the jti BEFORE redirecting — the OS will try to consume it immediately.
+  // The jti must exist in the table before the verify-token endpoint is called.
   const decoded = jwt.decode(token);
   await db.query(
     'INSERT INTO consumed_tokens (jti, student_id, expires_at) VALUES (?, ?, ?)',
@@ -1839,20 +1848,16 @@ app.post('/api/verify-token', async (req, res) => {
     return res.status(401).json({ authenticated: false, error: 'expired', message: 'Token has expired' });
   }
 
-  // 9. Replay check
-  const consumed = await db.query(
-    'SELECT id FROM consumed_tokens WHERE jti = ? AND consumed = TRUE',
+  // 9. Replay check (ATOMIC — prevents race condition between check and consume)
+  const consumeResult = await db.query(
+    'UPDATE consumed_tokens SET consumed = TRUE WHERE jti = ? AND consumed = FALSE',
     [decoded.jti]
   );
-  if (consumed.length > 0) {
-    return res.status(409).json({ authenticated: false, error: 'replay-detected', message: 'Token already used' });
+  // affected_rows === 0 means either: (a) jti not found, or (b) already consumed
+  // Both are replay-detected — return 409
+  if (consumeResult.affectedRows === 0) {
+    return res.status(409).json({ authenticated: false, error: 'replay-detected', message: 'Token already used or invalid' });
   }
-
-  // Mark jti as consumed
-  await db.query(
-    'UPDATE consumed_tokens SET consumed = TRUE WHERE jti = ?',
-    [decoded.jti]
-  );
 
   // 10. Identity check
   const enrollment = await db.getEnrollment(decoded.sub);
@@ -1912,6 +1917,23 @@ CREATE TABLE consumed_tokens (
 -- Clean up expired tokens daily (they're no longer attackable after exp)
 -- cron: DELETE FROM consumed_tokens WHERE expires_at < NOW() - INTERVAL 7 DAY;
 ```
+
+**Atomic consume — CRITICAL:**
+The check-and-consume operation MUST be atomic. A race condition where two requests both see the jti as unconsumed before either marks it consumed would allow a replay. Use one of:
+
+```sql
+-- Option A: atomic UPDATE (preferred — returns 0 rows if already consumed)
+UPDATE consumed_tokens SET consumed = TRUE WHERE jti = ? AND consumed = FALSE;
+-- If affected_rows === 0 → replay detected → return 409
+
+-- Option B: INSERT with UNIQUE constraint (atomic by database)
+INSERT INTO consumed_tokens (jti, student_id, expires_at, consumed)
+VALUES (?, ?, ?, TRUE)
+ON DUPLICATE KEY UPDATE consumed = TRUE;
+-- If insert_id === 0 → already existed → return 409
+```
+
+Never do `SELECT` then `UPDATE` as two separate operations — that's the race window.
 
 ---
 
