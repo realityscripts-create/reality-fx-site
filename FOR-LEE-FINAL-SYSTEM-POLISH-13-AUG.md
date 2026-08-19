@@ -1403,4 +1403,55 @@ After every chapter pass, the system counts how many chapters were completed wit
 
 **Audit section 25: ALL GREEN — 12 checks** (PASS_PCT, cooldown constant, 24h value, isUnlocked enforcement, cooldown helper, completedAt stamp, quiz shuffle, answer shuffle, rapid-progression flag, threshold, journey subtitle, countdown display). Stamp v=90. Commits: OS + outer.
 
-— Zorro (System B), 18 August 2026
+---
+
+## 50. System A Authentication + OS Session Architecture · 19 Aug 2026
+
+The founder has approved the definitive architecture for how System A and Reality FX OS interact. **Read the full spec:** `RFX-SESSION-AUTH-ARCHITECTURE.md` in the repo root.
+
+### The one rule
+
+> **System A is the only door and the only authority.**
+>
+> Every Reality FX OS entry — whether from the Student Portal, shortcut app, bookmark, direct URL, or any other route — must first be backed by a valid System A authentication and authorisation state.
+
+### What Lee must know
+
+1. **System A = THE FORT.** It owns identity, credentials, authentication, student ID, enrolment, course status, permissions, SRM, and access rights. No exceptions.
+
+2. **Reality FX OS = THE WORKSPACE.** It owns the OS interface, OS session, live session timer, activity detection, time banking, and session history. It never authenticates independently.
+
+3. **The shortcut app is NOT a second login.** It is a launcher that checks System A authentication before opening the OS. Same front door, different approach.
+
+4. **There is ONE student account, ONE set of credentials, ONE source of truth.**
+
+5. **Session states:** ACTIVE → IDLE → PAUSED → COMPLETED / EXPIRED. One active session per student at a time. Multi-tab reuse, not multi-session.
+
+6. **Time banking:** Total Time (banked, static during session) vs Live Session (counting up). Duration calculated server-side from timestamps. Stored as seconds. Banked only on session end. Atomic — no double-crediting.
+
+7. **Security:** The OS must NEVER trust localStorage, URL parameters, frontend flags, or browser cookies to authenticate. It must receive a trusted token/assertion from System A.
+
+### Implementation phases (in order)
+
+| Phase | Scope |
+|-------|-------|
+| **1 — The Fort** | System A sole authority. Every OS route requires valid auth. Shortcut app cannot bypass. Direct URLs cannot bypass. One identity. Secure handoff. |
+| **2 — OS Session** | Create session after auth. Unique session ID. Server-side timestamps. Visible Logout button. One session per student. Multi-tab guard. |
+| **3 — Time Bank** | Separate Total from Live. Store seconds. Server-side duration. Bank on end. No double-credit. Session history. |
+| **4 — Resilience** | Heartbeat. Activity detection. Inactivity warning. Auto-expiration. Browser-close protection. Network/sleep handling. |
+| **5 — Polish** | Logout confirmation. Banking animation. Session status indicator. Session history display. Active/Idle/Paused states. |
+
+### The student's mental model
+
+```
+System A     → "This is my Reality FX account."
+Reality FX OS → "This is my Academy workspace."
+OS Login     → "I'm entering the Academy."
+Live Session → "I'm here right now."
+Logout       → "I'm done for now."
+Time Bank    → "That time has been permanently credited."
+```
+
+**There is never a second OS account. There is never a second password. The Fort remains the Fort.**
+
+— Zorro (System B), 19 August 2026

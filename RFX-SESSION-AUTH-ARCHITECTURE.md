@@ -1,0 +1,437 @@
+# Reality FX OS — System A Authentication, OS Sessions & Time Banking Architecture
+
+> **Authoritative architecture document.** Every engineer, including Lee, must read this
+> before touching the auth or session layer. The founder approved this spec on 19 August 2026.
+
+---
+
+## 1. The Non-Negotiable Architecture
+
+Reality FX should have **one identity system and one authentication authority**.
+
+### System A = THE FORT
+
+System A is the only system responsible for:
+
+- Student identity
+- Login credentials
+- Authentication
+- Student ID
+- Enrolment
+- Course status
+- Permissions
+- Account status
+- SRM / student records
+- Access rights
+
+### System B = REALITY FX OS
+
+Reality FX OS is the student's operating environment.
+
+It is responsible for:
+
+- OS interface
+- OS session
+- Live session timer
+- Activity / inactivity detection
+- Time banking
+- Session history
+- OS-specific functionality
+
+### Critical rule
+
+**System B must NEVER independently authenticate a student.**
+
+There must be:
+
+- **ONE student account.**
+- **ONE set of credentials.**
+- **ONE source of truth for identity and access: System A.**
+
+---
+
+## 2. The Golden Rule
+
+> **A student can only enter Reality FX OS through a valid authenticated and authorised System A identity.**
+
+This must remain true regardless of how the student attempts to access the OS.
+
+### Route 1 — Student Portal
+
+```
+Student → System A Login → Authenticated → Student Portal → Reality FX OS
+```
+
+### Route 2 — OS Shortcut App
+
+```
+Student → Reality FX OS Shortcut → System A Authentication Check → Authenticated? → YES → Reality FX OS
+```
+
+### Route 3 — Direct URL
+
+```
+Student → /OS → System A Authentication Check → Authenticated? → YES → OS | NO → System A Login
+```
+
+### Route 4 — Old/bookmarked OS URL
+
+```
+Bookmark → OS → System A Authentication Check → Valid System A session? → YES → OS | NO → System A Login
+```
+
+**There should be no route that bypasses System A.**
+
+---
+
+## 3. The Shortcut App Is NOT a Second Login
+
+The shortcut app is simply a **launcher**.
+
+It should NOT contain:
+
+- A second username
+- A second password
+- A second student database
+- Separate OS credentials
+- Independent authentication
+
+Instead:
+
+```
+OS Shortcut → "Take me to Reality FX OS" → System A authentication check → Authorised? → Reality FX OS
+```
+
+The shortcut is effectively just another door leading to the **same front door**.
+
+---
+
+## 4. Seamless Re-entry
+
+If a student already has a valid System A authentication session:
+
+```
+Tap OS → System A validates identity → OS receives trusted authentication → OS session begins
+```
+
+From the student's perspective: **Tap OS → OS opens.**
+
+---
+
+## 5. No Valid Authentication
+
+```
+Student opens OS → System A authentication check → No valid authentication → Redirect to System A Login → Student logs in → System A verifies credentials → System A confirms identity/permissions → Student returned to OS → OS session created
+```
+
+The OS itself should never ask: "What's your OS password?" — **there is no such thing.**
+
+---
+
+## 6. Bypass Protection
+
+Every protected OS route must validate the authenticated System A identity.
+
+Nobody should be able to:
+
+- manipulate a URL
+- bookmark an internal OS page
+- access a hidden OS route
+- manually construct an OS URL
+- use the shortcut app
+- use browser history
+
+to bypass System A.
+
+---
+
+## 7. System A Authentication vs OS Session
+
+Two different concepts:
+
+| Concept | Answers |
+|---------|---------|
+| **System A Authentication** | "Who is this person and are they authorised to use Reality FX?" |
+| **Reality FX OS Session** | "Is this authorised student currently using the OS?" |
+
+---
+
+## 8. The OS Login Event
+
+Entering the OS creates an **OS session** from the already-authenticated System A identity.
+
+```
+System A Student ID:  RFX-00127
+System A Authentication: VALID
+        ↓
+Reality FX OS Session Created
+Session ID:     RFX-OS-8F92A
+Started:        13:04:21
+Status:         ACTIVE
+```
+
+---
+
+## 9. OS Logout
+
+The OS should have a clearly visible **LOG OUT** button.
+
+This means: **End my current Reality FX OS session.**
+
+It does NOT mean: Delete/logout my entire System A authentication session.
+
+```
+OS LOGOUT → End OS Session → Calculate session duration → Bank session time → Destroy OS session
+```
+
+---
+
+## 10. Time Banking
+
+| Value | Behaviour |
+|-------|-----------|
+| **TOTAL TIME** | Permanently banked time. Static during session. |
+| **LIVE SESSION** | Current session duration. Increases while active. |
+
+### Example
+
+```
+Login:   TOTAL 10h 00m | LIVE 00h 00m
++4h:     TOTAL 10h 00m | LIVE 04h 00m
+Logout:  TOTAL → 14h 00m (banked)
+Next:    TOTAL 14h 00m | LIVE 00h 00m
+```
+
+---
+
+## 11. Database Storage
+
+Store time as **seconds**, not formatted strings.
+
+```sql
+total_session_seconds = 52320  -- displayed as "14h 32m"
+```
+
+---
+
+## 12. Session Record
+
+Every OS session should have its own record:
+
+```
+session_id
+student_id
+started_at
+last_activity_at
+ended_at
+duration_seconds
+status
+termination_reason
+credited
+```
+
+---
+
+## 13. Heartbeat
+
+While an OS session is active, the browser periodically communicates with the backend:
+
+```
+Browser → "I'm still active." → Backend → Update last_activity_at
+```
+
+If communication stops, the backend knows the session may no longer be active.
+
+---
+
+## 14. Session States
+
+| State | Meaning |
+|-------|---------|
+| **ACTIVE** | Student is currently using the OS |
+| **IDLE** | No activity detected for the configured period |
+| **PAUSED** | Session timer stopped due to inactivity |
+| **COMPLETED** | Student explicitly logged out |
+| **EXPIRED** | System terminated the session after timeout |
+
+---
+
+## 15. Active Time vs Login Time
+
+Future capability — not day one:
+
+```
+Logged into OS: 09:00–16:00 = 7h
+Active:         09:00–11:30 + 12:00–14:00 + 15:00–15:30 = 5h
+```
+
+Architecture should support this later.
+
+---
+
+## 16. Multiple Devices / Multiple Tabs
+
+**ONE ACTIVE OS SESSION AT A TIME.**
+
+If the student tries to open another:
+
+> "Reality FX OS is already active on another device."
+
+Option: **Continue Here** — safely terminates the previous session and starts the new one.
+
+---
+
+## 17. Security Model
+
+The OS must NEVER trust:
+
+- localStorage
+- client-side variables
+- URL parameters
+- browser cookies created solely by the OS
+- frontend flags
+
+to determine whether someone is a valid student.
+
+The OS should receive a trusted authentication assertion/token from System A.
+
+---
+
+## 18. Atomic Logout + Time Banking
+
+When the student clicks Logout:
+
+1. Capture server time
+2. Calculate duration
+3. Add duration to Total Time
+4. Mark `credited = TRUE`
+5. If logout request fires twice, second request recognises already credited → refuses double-count
+
+---
+
+## 19. The Banking Animation
+
+On logout, visually transfer Live Session → Total:
+
+```
+TOTAL:        14h 00m
+              ↑ +03h 42m ↑
+LIVE SESSION: 03h 42m → ENDED
+```
+
+Total animates: 14h 00m → 14h 15m → 15h 30m → 17h 00m → 17h 42m
+
+---
+
+## 20. Recommended Architecture
+
+```
+┌───────────────────────────┐
+│     SYSTEM A — THE FORT   │
+│                           │
+│  Identity                 │
+│  Credentials              │
+│  Authentication           │
+│  Student Records          │
+│  Enrolment                │
+│  Permissions              │
+│  SRM                      │
+└─────────────┬─────────────┘
+              │
+     ONLY AUTHORITY
+              │
+              ▼
+┌───────────────────────────┐
+│       REALITY FX OS       │
+│                           │
+│  Authenticated Identity  │
+│  OS Session               │
+│  Live Session             │
+│  Activity Detection       │
+│  Time Banking             │
+│  Session History          │
+└─────────────┬─────────────┘
+              │
+              ▼
+┌───────────────────────────┐
+│     SESSION DATABASE      │
+│                           │
+│  Session ID               │
+│  Student ID               │
+│  Start                    │
+│  Activity                 │
+│  End                      │
+│  Duration                 │
+│  Status                   │
+│  Termination Reason       │
+│  Credited                 │
+└───────────────────────────┘
+```
+
+---
+
+## 21. Implementation Phases
+
+### Phase 1 — Establish the Fort
+- [ ] Confirm System A is the sole authentication authority
+- [ ] Ensure every OS route requires valid System A authentication
+- [ ] Ensure the shortcut app cannot bypass System A
+- [ ] Ensure direct OS URLs cannot bypass System A
+- [ ] Ensure there is only one student identity/account
+- [ ] Implement secure authentication handoff between System A and OS
+
+### Phase 2 — Build the OS Session
+- [ ] Create OS session after successful System A authentication
+- [ ] Generate unique session ID
+- [ ] Record server-side start timestamp
+- [ ] Add visible OS Logout button
+- [ ] Allow only one active OS session per student
+- [ ] Prevent duplicate sessions from multiple tabs
+
+### Phase 3 — Build the Time Bank
+- [ ] Separate Total Time from Live Session
+- [ ] Store time as seconds
+- [ ] Calculate duration server-side
+- [ ] Bank time only when the session ends
+- [ ] Prevent double-crediting
+- [ ] Keep session history
+
+### Phase 4 — Make It Resilient
+- [ ] Heartbeat
+- [ ] Activity detection
+- [ ] Inactivity warning
+- [ ] Automatic session expiration
+- [ ] Browser-close protection
+- [ ] Internet interruption handling
+- [ ] Computer sleep handling
+
+### Phase 5 — Polish
+- [ ] Logout confirmation
+- [ ] Banking animation
+- [ ] Session status indicator
+- [ ] Session history
+- [ ] Active/Idle/Paused states
+- [ ] Future learning analytics
+
+---
+
+## The Student's Mental Model
+
+```
+System A     → "This is my Reality FX account."
+Reality FX OS → "This is my Academy workspace."
+OS Login     → "I'm entering the Academy."
+Live Session → "I'm here right now."
+Logout       → "I'm done for now."
+Time Bank    → "That time has now been permanently credited to my Academy history."
+```
+
+**There is never a second Reality FX OS account. There is never a second password. There is never an alternative authentication route.**
+
+The shortcut is simply a shortcut.
+
+**The Fort remains the Fort.**
+
+---
+
+*Document created: 19 August 2026 · Founder-approved architecture*
