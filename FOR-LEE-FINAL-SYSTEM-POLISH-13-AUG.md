@@ -1455,55 +1455,265 @@ These are non-negotiable before go-live:
 
 **H7 — Direct Access:** Unauthenticated → redirect to System A. Authenticated but disconnected → retain session per grace rules. Do NOT destroy UI for temporary outages.
 
-### Token Protocol
+### §51 — Definitive Token Contract (Lee Implementation Guide)
 
-```
-POST /api/verify-token
-Body: { token: "<jwt>" }
-Response: {
-  valid: true,
-  studentId: "RFX-00127",
-  verifiedName: "...",
-  founder: true/false,
-  status: "ACTIVE",
-  trust: { score: 95, restricted: false },
-  printTrust: "trusted",
-  enrolled: [1,2,...,13]
+This is the **finalized** endpoint spec. Build from this, not from earlier descriptions.
+
+---
+
+#### 51.1 — Signing Keys
+
+Generate an **asymmetric key pair** (RS256 or EdDSA):
+
+- **Private key:** held by System A, used to sign tokens. NEVER leaves System A's server.
+- **Public key:** distributed to the OS (or exposed via a JWKS endpoint at `/.well-known/jwks.json`). Used to verify tokens.
+- **Key rotation:** include a `kid` (key ID) in each token header. System A tracks active keys. Old keys remain valid until their last token expires.
+
+The OS must NEVER possess the signing secret. It can verify but cannot manufacture.
+
+---
+
+#### 51.2 — Token Generation (on System A login)
+
+When a student logs in through System A and requests OS access:
+
+1. System A authenticates the student (existing login flow)
+2. System A generates a short-lived signed JWT with these claims:
+
+```json
+{
+  "sub": "RFX-00127",
+  "name": "Leeroy Chirwa",
+  "founder": false,
+  "status": "ACTIVE",
+  "permissions": null,
+  "printTrust": "trusted",
+  "enrolled": [1,2,3,4,5,6,7,8,9,10,11,12,13],
+  "iat": 1692453600,
+  "exp": 1692453900,
+  "jti": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "iss": "realityfx",
+  "aud": "rfx-os"
 }
 ```
 
-### OS-Side Auth Gate (v112 — Implemented)
+**Header:**
+```json
+{
+  "alg": "RS256",
+  "kid": "key-2026-08"
+}
+```
 
-The OS now has the auth gate in `os.js`. Lee's side is the `/api/verify-token` endpoint on System A.
+**Required claims:**
 
-**OS-side implementation:**
-- `rfxAuthGate()` captures `?token=...` from URL, calls `/api/verify-token`, populates `S.handoff` from verified claims, creates OS session, scrubs URL
-- `AUTH` object separates authentication state from OS session state
-- `OS_SESSION` object tracks the study session (created AFTER auth)
-- `TRUST_VERIFIED` is ONLY set inside `rfxAuthGate()`'s success path
-- `wireOsLogout()` clears AUTH + TRUST + OS_SESSION on logout (Attack G)
+| Claim | Type | Description |
+|---|---|---|---|
+| `sub` | string | Student ID (`RFX-XXXXX`) |
+| `name` | string | Verified full name |
+| `founder` | boolean | Founder status |
+| `status` | string | `ACTIVE`, `SUSPENDED`, `DEMO`, etc. |
+| `permissions` | object\|null | OS-specific permissions (future use) |
+| `printTrust` | string | `standard` or `trusted` |
+| `enrolled` | array | Chapter numbers the student is enrolled in |
+| `iat` | number | Issued at (Unix timestamp) |
+| `exp` | number | Expires at (Unix timestamp) — **max 5 minutes from iat** |
+| `jti` | string | Unique token ID (UUID v4) — **single-use** |
+| `iss` | string | Must be `realityfx` |
+| `aud` | string | Must be `rfx-os` |
 
-**Lee must build on System A side:**
-1. Generate signing keys (RS256 or EdDSA)
-2. Build `POST /api/verify-token` endpoint
-3. Token claims: sub, name, founder, status, permissions, iat, exp, jti, iss, aud, kid
-4. Validate: signature, expiry, iss, aud, jti replay check
-5. Return verified identity + trust data
-6. On student login → generate short-lived token → redirect to `/os/?token=...`
+**Token lifetime:** maximum **5 minutes**. This is an authentication handoff, not a persistent session credential.
 
-### Regression Test Matrix (Phase 4)
+3. System A redirects the student to:
+```
+/os/?token=<signed_jwt>
+```
 
+4. System A records the `jti` in a consumed-tokens table (for replay protection).
+
+---
+
+#### 51.3 — Verification Endpoint
+
+```
+POST /api/verify-token
+Content-Type: application/json
+
+{
+  "token": "<raw_jwt_string>"
+}
+```
+
+**System A must validate (in order):**
+
+1. **Structure:** Is this a valid JWT with 3 parts (header.payload.signature)?
+2. **Algorithm:** Is the header `alg` one we support (RS256/EdDSA)?
+3. **Key:** Does the `kid` header match a known active key?
+4. **Signature:** Does the signature verify against the public key?
+5. **Issuer:** Does `iss === "realityfx"`?
+6. **Audience:** Does `aud === "rfx-os"`?
+7. **Expiry:** Is `exp > now()`?
+8. **Replay:** Has this `jti` been consumed? If yes → reject.
+9. **Identity:** Does `sub` match a real, active enrollment?
+10. **Enrollment:** Is the student's status compatible with OS access?
+11. **Trust:** Fetch current trust score from the enrollment record.
+
+---
+
+#### 51.4 — Success Response (200)
+
+```json
+{
+  "authenticated": true,
+  "identity": {
+    "studentId": "RFX-00127",
+    "verifiedName": "Leeroy Chirwa",
+    "founder": false,
+    "status": "ACTIVE",
+    "permissions": null,
+    "printTrust": "trusted",
+    "enrolled": [1,2,3,4,5,6,7,8,9,10,11,12,13]
+  },
+  "trust": {
+    "score": 95,
+    "restricted": false
+  },
+  "token": {
+    "issuedAt": 1692453600,
+    "expiresAt": 1692453900,
+    "jti": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  }
+}
+```
+
+**Critical: `founder: true` is NOT equivalent to `trust: 100`.** Identity and trust are logically separate even though System A owns both. A founder's trust score comes from their enrollment record, not from the founder flag.
+
+After returning 200, the `jti` is marked as consumed. Duplicate verification of the same `jti` must return 409.
+
+---
+
+#### 51.5 — Error Responses
+
+| HTTP | Error Code | Meaning | When |
+|---|---|---|---|
+| **400** | `malformed` | Bad request | Missing `token` field, not a string, not 3-part JWT |
+| **401** | `invalid` | Bad signature | Signature doesn't verify against any active key |
+| **401** | `expired` | Token expired | `exp < now()` |
+| **401** | `wrong-issuer` | Unknown issuer | `iss !== "realityfx"` |
+| **401** | `wrong-audience` | Wrong audience | `aud !== "rfx-os"` |
+| **403** | `not-permitted` | Identity valid, OS access denied | Student status = SUSPENDED, or not enrolled |
+| **409** | `replay-detected` | JTI already consumed | `jti` found in consumed-tokens table |
+| **500** | `verification-error` | System A internal error | Key lookup failed, DB error, etc. |
+| **503** | `unavailable` | Verification service down | System A cannot process right now |
+
+**Error response format:**
+```json
+{
+  "authenticated": false,
+  "error": "expired",
+  "message": "Token has expired"
+}
+```
+
+The OS must distinguish three fundamentally different states:
+- **401 (any):** "You are not authenticated" → redirect to System A
+- **403:** "You are authenticated but not permitted" → show authorization error
+- **500/503:** "We cannot verify right now" → degraded state (retain existing session)
+
+---
+
+#### 51.6 — OS-Side Flow (already implemented in v113)
+
+The OS auth gate (`rfxAuthGate()`) is already built. Here's what it does:
+
+```
+1. Capture ?token= from URL
+2. Scrub URL immediately (history.replaceState)
+3. POST token to /api/verify-token
+4. If 200 → populate AUTH from response, create OS session, set TRUST_VERIFIED
+5. If 401 → redirect to System A (production) / fallback (dev)
+6. If 403 → show authorization error
+7. If 500/503 → degraded state (existing session retained)
+8. Raw token is NEVER stored in localStorage, S.handoff, or logs
+```
+
+---
+
+#### 51.7 — Login Page Redirect Flow
+
+On System A's member panel, when a student clicks "Open Reality FX OS":
+
+1. System A generates a fresh JWT (max 5 min expiry, unique jti)
+2. System A records the jti as "consumed"
+3. System A redirects to: `/os/?token=<jwt>`
+4. OS receives, validates, establishes auth, scrubs URL
+5. Student is in the OS with verified identity
+
+---
+
+#### 51.8 — Testing Checklist for Lee
+
+Before marking the endpoint as done, verify:
+
+- [ ] Valid token → 200 with correct identity + trust
+- [ ] Modified payload (forged signature) → 401 `invalid`
+- [ ] Expired token → 401 `expired`
+- [ ] Wrong issuer → 401 `wrong-issuer`
+- [ ] Wrong audience → 401 `wrong-audience`
+- [ ] Replayed jti → 409 `replay-detected`
+- [ ] Missing token → 400 `malformed`
+- [ ] Suspended student → 403 `not-permitted`
+- [ ] Founder trust comes from enrollment record, not founder flag
+- [ ] Key rotation works (old kid → rejected, new kid → accepted)
+- [ ] Token lifetime is max 5 minutes
+
+---
+
+### OS-Side Auth Gate (v113 — Implemented)
+
+**What's already built in `os.js`:**
+- `rfxAuthGate()` — captures token, validates, populates AUTH from verified response, creates OS session, scrubs URL
+- `AUTH` object — authentication state (separate from OS session)
+- `OS_SESSION` object — study session (created AFTER auth)
+- `TRUST_VERIFIED` — ONLY set inside `rfxAuthGate()`'s success path
+- `wireOsLogout()` — clears AUTH + TRUST + OS_SESSION on logout
+- Production: no token / invalid token → redirects to System A
+- Dev: falls through to `loadHandshake()` (IS_DEV gate)
+- Token NEVER stored in localStorage, S.handoff, or logs
+- `S.handoff` populated from verified RESPONSE, not from the token
+
+### Regression Test Matrix
+
+**Production auth tests:**
 - [ ] Founder authenticates → 100% Excellent
-- [ ] Normal student authenticates → correct trust
-- [ ] Forged token → rejected
-- [ ] Expired token → rejected
-- [ ] Missing token → redirected
-- [ ] System A down → existing session persists
+- [ ] Normal student authenticates → correct trust score
+- [ ] Forged token → rejected (401)
+- [ ] Expired token → rejected (401)
+- [ ] Wrong audience → rejected (401)
+- [ ] Replay → rejected (409)
+- [ ] Missing token → redirected to System A
+- [ ] Suspended student → 403 (not permitted)
+- [ ] System A down → existing session persists (degraded)
+- [ ] Direct `/os/` → cannot bypass auth
+
+**Identity boundary tests:**
 - [ ] Founder logout → next login = no identity leakage
 - [ ] Duplicate logout → no double banking
-- [ ] Refresh → same session
-- [ ] Direct `/os/` → cannot bypass auth
-- [ ] Forged `S.handoff.founder=true` in localStorage → trust bar stays "—" (IS_DEV=false in production, path is dead)
+- [ ] Refresh → same OS session
+- [ ] Forged `S.handoff.founder=true` in localStorage → trust bar stays "—"
+- [ ] localStorage manipulation → AUTH unchanged (Attack J)
+- [ ] Post-auth URL manipulation → AUTH not reconstructed from storage (Attack H)
+
+### Implementation Phases
+
+| Phase | Scope | Status |
+|-------|-------|--------|
+| **1 — The Fort** | System A sole auth authority. Token generation. | 🔨 Lee builds endpoint |
+| **2 — OS Gate** | Auth gate, credential lifecycle, production boundary. | ✅ v113 done |
+| **3 — Session Liveness** | Heartbeat, auth expiry, degraded state, recovery. | ⏳ After endpoint works |
+| **4 — Time Banking** | Exactly-once finalization, bank on logout. | ⏳ After heartbeat |
+
+> **Do not start Phase 3 until `/api/verify-token` is implemented, tested, and one successful end-to-end authentication works. Build heartbeat around the real contract, not assumptions.**
 
 ### Implementation phases (in order)
 

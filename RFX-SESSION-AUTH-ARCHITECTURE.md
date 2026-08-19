@@ -738,33 +738,55 @@ The OS-side auth gate is now implemented in `os.js`:
 
 ### Phase 3 — Attack Test Harness
 
-Attacks A–G are documented in `.freebuff/tools/auth-attack-harness.html`:
-- A: Forged token (modified payload) → rejected
-- B: Fabricated token (fake key) → rejected
-- C: Expired token → rejected
-- D: Wrong audience → rejected
-- E: Replay (reused jti) → rejected
+Attacks A–S are documented in `.freebuff/tools/auth-attack-harness.html`:
+- A–E: Token forgery, fabrication, expiry, wrong audience, replay
 - F: Stale session → grace policy
 - G: Identity leakage → blocked by logout cleanup
+- H–J: Post-auth URL manipulation, direct access, localStorage forgery
+- K–O: Forged signature, fabricated key, expired, wrong audience, replay (System A side)
+- P: System A outage → DEGRADED state
+- Q: Expiry during outage → re-authentication required
+- R: Logout during degraded → safe clear + deferred finalization
+- S: Cross-account transition → zero leakage
+
+### 33 — Seven Frozen Invariants (v113)
+
+These invariants are FROZEN. They must remain true through all future phases.
+
+1. **AUTH can only become authenticated through successful System A verification.**
+2. **TRUST_VERIFIED can only become true through that same successful authentication path.**
+3. **S.handoff is never an authentication authority in production.** It is a data compatibility structure populated from the verified response.
+4. **OS_SESSION can only be created after authentication.**
+5. **Logout destroys AUTH + TRUST + OS_SESSION together.** No partial cleanup.
+6. **No raw authentication credential is persisted client-side.** Token is captured, validated, scrubbed, discarded.
+7. **Production has exactly one authentication entry point.** `rfxAuthGate()` → `/api/verify-token` → verified response.
+
+If any of these are violated, the security model is broken.
 
 ### Phase 4 — Regression Test Matrix
 
+**Production auth tests:**
 - [ ] Founder authenticates → 100% Excellent standing
 - [ ] Normal student authenticates → correct trust score
-- [ ] Forged token → rejected
-- [ ] Expired token → rejected
+- [ ] Forged token → rejected (401)
+- [ ] Expired token → rejected (401)
+- [ ] Wrong audience → rejected (401)
+- [ ] Replay → rejected (409)
 - [ ] Missing token → redirected to System A
-- [ ] Academy/System A temporarily unavailable → existing authenticated session persists
-- [ ] Founder logout → another student login → **no founder identity/trust leakage**
-- [ ] Duplicate logout → **no double banking**
-- [ ] Page refresh → same OS session, not a new session
-- [ ] Close/reopen → correct session recovery rules
-- [ ] Direct `/os/` access → cannot bypass authentication
-- [ ] Token removed from URL after capture (browser history clean)
-- [ ] localStorage contains NO tokens (only session metadata)
-- [ ] Forged `S.handoff.founder=true` in localStorage → trust bar stays "—" (no verified identity)
+- [ ] Suspended student → 403 (not permitted)
+- [ ] System A down → existing session persists (degraded)
+- [ ] Direct `/os/` → cannot bypass auth
+
+**Identity boundary tests:**
+- [ ] Founder logout → next login = no identity leakage
+- [ ] Duplicate logout → no double banking
+- [ ] Refresh → same OS session
+- [ ] Forged `S.handoff.founder=true` in localStorage → trust bar stays "—"
+- [ ] localStorage manipulation → AUTH unchanged (Attack J)
+- [ ] Post-auth URL manipulation → AUTH not reconstructed from storage (Attack H)
 
 ---
 
 *Document created: 19 August 2026 · Founder-approved architecture*
 *Security hardening added: 19 August 2026 · Founder-reviewed security requirements*
+*Token contract finalized: 19 August 2026 · Seven frozen invariants established*
