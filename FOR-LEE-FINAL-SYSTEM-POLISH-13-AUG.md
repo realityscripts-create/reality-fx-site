@@ -1445,7 +1445,7 @@ These are non-negotiable before go-live:
 
 **H2 — Token Protection:** Short-lived one-time auth code preferred. If JWT: HTTPS only, 5-min expiry, single-use, removed from URL immediately via `history.replaceState`, NEVER stored in localStorage, NEVER logged.
 
-**H3 — Auth ≠ Trust:** A valid token proves identity, NOT that the OS should accept all local values as authoritative. Production trust MUST require verified System A identity. The `S.handoff.founder → 100%` fallback is dev/graceful-degradation ONLY.
+**H3 — Auth ≠ Trust (Structurally Enforced):** A valid token proves identity, NOT that the OS should accept all local values as authoritative. The `S.handoff.founder → 100%` fallback is **DEV-ONLY** (gated by `IS_DEV = location.hostname === "localhost"`). In production, this code path is **structurally dead**. A forged `S.handoff.founder=true` in localStorage produces nothing. This is not an intention — it is a structural guarantee.
 
 **H4 — Separate Objects:** AUTHENTICATED IDENTITY (from token) ≠ OS SESSION (created after validation). Restarting OS does not create new identity. Expired token does not corrupt study time.
 
@@ -1484,7 +1484,7 @@ Response: {
 - [ ] Duplicate logout → no double banking
 - [ ] Refresh → same session
 - [ ] Direct `/os/` → cannot bypass auth
-- [ ] Forged `S.handoff.founder=true` in localStorage → trust bar stays "—"
+- [ ] Forged `S.handoff.founder=true` in localStorage → trust bar stays "—" (IS_DEV=false in production, path is dead)
 
 ### Implementation phases (in order)
 

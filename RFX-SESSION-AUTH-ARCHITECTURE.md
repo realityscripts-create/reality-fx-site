@@ -510,9 +510,21 @@ Verified System A token
   → OS displays trust/standing based on verified claims + authorized academy data
 ```
 
-The current `S.handoff.founder → 100%` fallback is useful for **development/graceful degradation only**. Once token authentication is live, **production trust MUST require a verified System A identity.**
+The `S.handoff.founder → 100%` fallback is **DEV-ONLY** (gated by `IS_DEV = location.hostname === "localhost"`). In production, this code path is **structurally dead** — the OS will never trust a local founder flag. A forged `S.handoff.founder=true` in localStorage produces nothing.
 
-We must not create a loophole where `founder=true` in a locally forged handoff produces 100% trust.
+```
+DEV (localhost):
+  IS_DEV = true
+  founder fallback → allowed (for development/testing)
+
+PRODUCTION (any real domain):
+  IS_DEV = false
+  founder fallback → structurally impossible
+  no verified token → DEMO / UNAUTHENTICATED
+  forged S.handoff.founder → ignored
+```
+
+This is not an "intention" — it is a structural guarantee. The `IS_DEV` flag is evaluated at module load time and cannot be modified by the student.
 
 ### 30.4 — OS Session as a Separate Object
 
