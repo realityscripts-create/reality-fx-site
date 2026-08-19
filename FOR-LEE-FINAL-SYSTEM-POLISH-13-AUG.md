@@ -1669,6 +1669,301 @@ Before marking the endpoint as done, verify:
 
 ---
 
+#### 51.9 — Implementation Code (Node.js / Express)
+
+This is ready-to-use code. Adapt to your existing System A structure.
+
+---
+
+**Step 1: Generate signing keys (run once)**
+
+```bash
+# RS256 (RSA + SHA-256)
+openssl genrsa -out private-key.pem 2048
+openssl rsa -in private-key.pem -pubout -out public-key.pem
+
+# Or EdDSA (smaller keys, faster verification)
+# openssl genpkey -algorithm Ed25519 -out private-key.pem
+# openssl pkey -in private-key.pem -pubout -out public-key.pem
+```
+
+Store `private-key.pem` securely on the server. Never commit it to git.
+Distribute `public-key.pem` to the OS (or expose via JWKS endpoint).
+
+---
+
+**Step 2: Token generation (on member panel login)**
+
+```javascript
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const crypto = require('crypto');
+
+// Load the private key (once at server start)
+const PRIVATE_KEY = fs.readFileSync('private-key.pem', 'utf8');
+const KEY_ID = 'key-2026-08'; // rotate monthly or on compromise
+
+/**
+ * Generate a short-lived OS access token.
+ * Call this when the student clicks "Open Reality FX OS" on the member panel.
+ */
+function generateOsToken(enrollment) {
+  const now = Math.floor(Date.now() / 1000);
+  const token = jwt.sign(
+    {
+      sub: enrollment.studentId,          // "RFX-00127"
+      name: enrollment.verifiedName,       // "Leeroy Chirwa"
+      founder: !!enrollment.founder,       // true/false
+      status: enrollment.status,           // "ACTIVE"
+      permissions: null,                   // future use
+      printTrust: enrollment.printTrust || 'standard',
+      enrolled: enrollment.enrolled || [], // [1,2,3,...,13]
+      iss: 'realityfx',                    // issuer — MUST be this exact string
+      aud: 'rfx-os',                       // audience — MUST be this exact string
+      iat: now,
+      exp: now + 300,                       // 5 minutes — NEVER longer
+      jti: crypto.randomUUID()             // unique, single-use
+    },
+    PRIVATE_KEY,
+    { algorithm: 'RS256', header: { kid: KEY_ID } }
+  );
+  return token;
+}
+```
+
+---
+
+**Step 3: "Open OS" button handler (on member panel)**
+
+```javascript
+app.get('/open-os', requireAuth, async (req, res) => {
+  const enrollment = await db.getEnrollment(req.user.studentId);
+  if (!enrollment) return res.status(403).send('Not enrolled');
+
+  // Generate the token
+  const token = generateOsToken(enrollment);
+
+  // Record the jti for replay protection
+  const decoded = jwt.decode(token);
+  await db.query(
+    'INSERT INTO consumed_tokens (jti, student_id, expires_at) VALUES (?, ?, ?)',
+    [decoded.jti, decoded.sub, new Date(decoded.exp * 1000)]
+  );
+
+  // Redirect to the OS with the token
+  res.redirect(`/os/?token=${token}`);
+});
+```
+
+---
+
+**Step 4: Verification endpoint**
+
+```javascript
+const crypto = require('crypto');
+
+// Load the public key (for verification — can be shared with the OS)
+const PUBLIC_KEY = fs.readFileSync('public-key.pem', 'utf8');
+
+// Active keys for rotation (kid → publicKey)
+const ACTIVE_KEYS = {
+  'key-2026-08': PUBLIC_KEY
+  // 'key-2026-09': NEW_PUBLIC_KEY,  // add on rotation
+};
+
+app.post('/api/verify-token', async (req, res) => {
+  const { token } = req.body;
+
+  // 1. Structure check
+  if (!token || typeof token !== 'string') {
+    return res.status(400).json({ authenticated: false, error: 'malformed', message: 'Missing or invalid token' });
+  }
+
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    return res.status(400).json({ authenticated: false, error: 'malformed', message: 'Not a valid JWT' });
+  }
+
+  // 2. Decode header to get kid
+  let header;
+  try {
+    header = JSON.parse(Buffer.from(parts[0], 'base64url').toString());
+  } catch (e) {
+    return res.status(400).json({ authenticated: false, error: 'malformed', message: 'Invalid header' });
+  }
+
+  // 3. Algorithm check
+  if (!['RS256', 'EdDSA'].includes(header.alg)) {
+    return res.status(401).json({ authenticated: false, error: 'invalid', message: 'Unsupported algorithm' });
+  }
+
+  // 4. Key lookup
+  const publicKey = ACTIVE_KEYS[header.kid];
+  if (!publicKey) {
+    return res.status(401).json({ authenticated: false, error: 'invalid', message: 'Unknown key' });
+  }
+
+  // 5. Verify signature + claims
+  let decoded;
+  try {
+    decoded = jwt.verify(token, publicKey, {
+      algorithms: [header.alg],
+      issuer: 'realityfx',
+      audience: 'rfx-os'
+    });
+  } catch (e) {
+    if (e.name === 'TokenExpiredError') {
+      return res.status(401).json({ authenticated: false, error: 'expired', message: 'Token has expired' });
+    }
+    if (e.name === 'JsonWebTokenError') {
+      return res.status(401).json({ authenticated: false, error: 'invalid', message: 'Invalid signature' });
+    }
+    if (e.name === 'NotBeforeError') {
+      return res.status(401).json({ authenticated: false, error: 'invalid', message: 'Token not yet valid' });
+    }
+    return res.status(401).json({ authenticated: false, error: 'invalid', message: 'Verification failed' });
+  }
+
+  // 6. Issuer check (jwt.verify does this, but double-check)
+  if (decoded.iss !== 'realityfx') {
+    return res.status(401).json({ authenticated: false, error: 'wrong-issuer', message: 'Unknown issuer' });
+  }
+
+  // 7. Audience check (jwt.verify does this, but double-check)
+  if (decoded.aud !== 'rfx-os') {
+    return res.status(401).json({ authenticated: false, error: 'wrong-audience', message: 'Wrong audience' });
+  }
+
+  // 8. Expiry check (jwt.verify does this, but double-check)
+  if (decoded.exp < Math.floor(Date.now() / 1000)) {
+    return res.status(401).json({ authenticated: false, error: 'expired', message: 'Token has expired' });
+  }
+
+  // 9. Replay check
+  const consumed = await db.query(
+    'SELECT id FROM consumed_tokens WHERE jti = ? AND consumed = TRUE',
+    [decoded.jti]
+  );
+  if (consumed.length > 0) {
+    return res.status(409).json({ authenticated: false, error: 'replay-detected', message: 'Token already used' });
+  }
+
+  // Mark jti as consumed
+  await db.query(
+    'UPDATE consumed_tokens SET consumed = TRUE WHERE jti = ?',
+    [decoded.jti]
+  );
+
+  // 10. Identity check
+  const enrollment = await db.getEnrollment(decoded.sub);
+  if (!enrollment) {
+    return res.status(401).json({ authenticated: false, error: 'invalid', message: 'Student not found' });
+  }
+
+  // 11. Enrollment/status check
+  if (enrollment.status === 'SUSPENDED') {
+    return res.status(403).json({ authenticated: false, error: 'not-permitted', message: 'Account suspended' });
+  }
+
+  // 12. Fetch trust (separate from identity)
+  const trust = enrollment.trust || { score: 100, restricted: false };
+
+  // 13. Return verified response
+  return res.json({
+    authenticated: true,
+    identity: {
+      studentId: enrollment.studentId,
+      verifiedName: enrollment.verifiedName,
+      founder: !!enrollment.founder,
+      status: enrollment.status,
+      permissions: null,
+      printTrust: enrollment.printTrust || 'standard',
+      enrolled: enrollment.enrolled || []
+    },
+    trust: {
+      score: trust.score,
+      restricted: !!trust.restricted
+    },
+    token: {
+      issuedAt: decoded.iat,
+      expiresAt: decoded.exp,
+      jti: decoded.jti
+    }
+  });
+});
+```
+
+---
+
+**Step 5: Database table for replay protection**
+
+```sql
+CREATE TABLE consumed_tokens (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  jti VARCHAR(36) NOT NULL UNIQUE,
+  student_id VARCHAR(20) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  consumed BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_jti (jti),
+  INDEX idx_expires (expires_at)
+);
+
+-- Clean up expired tokens daily (they're no longer attackable after exp)
+-- cron: DELETE FROM consumed_tokens WHERE expires_at < NOW() - INTERVAL 7 DAY;
+```
+
+---
+
+**Step 6: JWKS endpoint (optional — for OS public key distribution)**
+
+```javascript
+// Expose the public key at /.well-known/jwks.json
+// The OS can fetch this to verify tokens without hardcoding the public key
+app.get('/.well-known/jwks.json', (req, res) => {
+  const publicKeyObject = crypto.createPublicKey(PUBLIC_KEY);
+  const jwk = publicKeyObject.export({ format: 'jwk' });
+  res.json({
+    keys: [{
+      ...jwk,
+      kid: KEY_ID,
+      alg: 'RS256',
+      use: 'sig'
+    }]
+  });
+});
+```
+
+---
+
+**Step 7: Cleanup job**
+
+```javascript
+// Run daily — remove consumed tokens older than 7 days
+async function cleanupConsumedTokens() {
+  await db.query(
+    'DELETE FROM consumed_tokens WHERE expires_at < ? OR (consumed = TRUE AND created_at < ?)',
+    [new Date(), new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)]
+  );
+}
+```
+
+---
+
+**Quick reference — what to implement in order:**
+
+1. Generate keys (`openssl genrsa`)
+2. Add `consumed_tokens` table to database
+3. Implement `generateOsToken()`
+4. Implement `/open-os` route (member panel)
+5. Implement `POST /api/verify-token`
+6. Add "Open OS" button to member panel UI
+7. Test with the checklist in §51.8
+8. Add `/.well-known/jwks.json` (optional)
+9. Add cleanup cron job
+
+---
+
 ### OS-Side Auth Gate (v113 — Implemented)
 
 **What's already built in `os.js`:**
