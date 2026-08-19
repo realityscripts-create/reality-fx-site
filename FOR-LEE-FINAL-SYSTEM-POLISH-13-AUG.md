@@ -1429,6 +1429,12 @@ The founder has approved the definitive architecture for how System A and Realit
 
 6. **Time banking:** Total Time (banked, static during session) vs Live Session (counting up). Duration calculated server-side from timestamps. Stored as seconds. Banked only on session end. Atomic — no double-crediting.
 
+   **CRITICAL: Checkpoint vs Bank distinction:**
+   - `sesCheckpoint()` = saves active session state (start time, last activity). Does NOT modify `S.secs`. Fires on 30s interval, tab hide, browser close.
+   - `sesBank()` = deposits session duration into `S.secs`. Fires ONLY on Logout button click or server-side session expiry.
+   - `S.secs` (TOTAL) must remain completely static throughout an active session. Even after 100 checkpoints, TOTAL stays the same.
+   - `visibilitychange` must NOT bank — students may switch tabs temporarily.
+
 7. **Security:** The OS must NEVER trust localStorage, URL parameters, frontend flags, or browser cookies to authenticate. It must receive a trusted token/assertion from System A.
 
 ### Implementation phases (in order)

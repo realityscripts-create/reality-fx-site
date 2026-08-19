@@ -232,7 +232,28 @@ credited
 
 ---
 
-## 13. Heartbeat
+## 13. Heartbeat / Checkpoint vs Bank
+
+**Critical distinction:**
+
+| Action | What it does | When it fires | Modifies `S.secs`? |
+|--------|-------------|---------------|---------------------|
+| **Checkpoint** | Saves the active session state (start time, last activity) | Every 30s, on tab hide, on browser close | **NO** |
+| **Bank** | Deposits session duration into `S.secs` (TOTAL) | **Only on Logout** or server-side session expiry | **YES** |
+
+`S.secs` (TOTAL) must remain **completely static** throughout an active session.
+
+Even after 100 checkpoint events, if TOTAL = 10h at login, it must still be 10h.
+
+Only the Logout button (or future server-side session expiry) triggers the bank:
+
+```
+10h (TOTAL) + 4h (LIVE SESSION) = 14h (new TOTAL)
+```
+
+**`visibilitychange` must NOT bank time** — students may simply switch tabs temporarily.
+
+### Heartbeat (future Phase 2)
 
 While an OS session is active, the browser periodically communicates with the backend:
 
