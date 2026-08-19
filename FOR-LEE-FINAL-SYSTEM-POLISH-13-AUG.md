@@ -1437,6 +1437,55 @@ The founder has approved the definitive architecture for how System A and Realit
 
 7. **Security:** The OS must NEVER trust localStorage, URL parameters, frontend flags, or browser cookies to authenticate. It must receive a trusted token/assertion from System A.
 
+### Security Hardening (Production Requirements)
+
+These are non-negotiable before go-live:
+
+**H1 — Asymmetric Signing:** Use RS256 or EdDSA, NOT HS256. System A holds the private key. OS has only the public key (or verification endpoint). Include `kid` header for key rotation.
+
+**H2 — Token Protection:** Short-lived one-time auth code preferred. If JWT: HTTPS only, 5-min expiry, single-use, removed from URL immediately via `history.replaceState`, NEVER stored in localStorage, NEVER logged.
+
+**H3 — Auth ≠ Trust:** A valid token proves identity, NOT that the OS should accept all local values as authoritative. Production trust MUST require verified System A identity. The `S.handoff.founder → 100%` fallback is dev/graceful-degradation ONLY.
+
+**H4 — Separate Objects:** AUTHENTICATED IDENTITY (from token) ≠ OS SESSION (created after validation). Restarting OS does not create new identity. Expired token does not corrupt study time.
+
+**H5 — Heartbeat:** 30s ping distinguishes auth from activity. System A outage = degraded state (retain session, show warning), NOT session destruction.
+
+**H6 — Idempotent Logout:** Finalization uses `sessionId + finalizationId`. Duplicate logout = same transaction, no double banking.
+
+**H7 — Direct Access:** Unauthenticated → redirect to System A. Authenticated but disconnected → retain session per grace rules. Do NOT destroy UI for temporary outages.
+
+### Token Protocol
+
+```
+POST /api/verify-token
+Body: { token: "<jwt>" }
+Response: {
+  valid: true,
+  studentId: "RFX-00127",
+  verifiedName: "...",
+  founder: true/false,
+  status: "ACTIVE",
+  trust: { score: 95, restricted: false },
+  printTrust: "trusted",
+  enrolled: [1,2,...,13]
+}
+```
+
+### Regression Test Matrix (Phase 4)
+
+- [ ] Founder authenticates → 100% Excellent
+- [ ] Normal student authenticates → correct trust
+- [ ] Forged token → rejected
+- [ ] Expired token → rejected
+- [ ] Missing token → redirected
+- [ ] System A down → existing session persists
+- [ ] Founder logout → next login = no identity leakage
+- [ ] Duplicate logout → no double banking
+- [ ] Refresh → same session
+- [ ] Direct `/os/` → cannot bypass auth
+- [ ] Forged `S.handoff.founder=true` in localStorage → trust bar stays "—"
+
 ### Implementation phases (in order)
 
 | Phase | Scope |

@@ -455,4 +455,230 @@ The shortcut is simply a shortcut.
 
 ---
 
+## 30. Security Hardening — Production Requirements
+
+> These requirements were added after the initial architecture review. They tighten
+> the protocol to prevent avoidable holes before implementation begins.
+
+### 30.1 — Asymmetric Signing (Non-Negotiable)
+
+System A must use **asymmetric signing** (RS256 or EdDSA), NOT symmetric/shared-secret (HS256).
+
+| Entity | Holds | Can do |
+|---|---|---|
+| System A | **Private key** | Sign tokens |
+| OS | **Public key** (or verification endpoint) | Verify tokens |
+
+The OS must **never** possess the signing secret. This preserves the trust boundary: the OS can verify authenticity but cannot manufacture a valid token.
+
+Key rotation: include a `kid` (key ID) header in the JWT so System A can rotate keys without breaking existing sessions.
+
+### 30.2 — Bearer Token Protection
+
+The signed token must NOT sit exposed in URLs longer than necessary.
+
+**Preferred flow (Phase 1):**
+
+```
+System A → short-lived one-time authorization code → OS → server-side exchange → OS session
+```
+
+**If using signed JWT during Phase 1:**
+
+- HTTPS only
+- Very short-lived (5 minutes max)
+- Single-use where practical
+- Immediately removed from the URL after capture (`history.replaceState`)
+- **Never** stored in localStorage
+- **Never** written to analytics or logging
+- Captured from URL param or HTTP-only cookie, then deleted from the URL
+
+### 30.3 — Authentication ≠ Trust (Separation of Concerns)
+
+A valid System A token establishes:
+
+> **"This is RFX-00127 and System A authenticated this user."**
+
+It does NOT mean the OS should blindly accept every future local value as authoritative.
+
+**Hierarchy:**
+
+```
+Verified System A token
+  → Identity / enrollment / founder / permissions
+  → OS creates its local session
+  → OS displays trust/standing based on verified claims + authorized academy data
+```
+
+The current `S.handoff.founder → 100%` fallback is useful for **development/graceful degradation only**. Once token authentication is live, **production trust MUST require a verified System A identity.**
+
+We must not create a loophole where `founder=true` in a locally forged handoff produces 100% trust.
+
+### 30.4 — OS Session as a Separate Object
+
+Two distinct data structures must exist:
+
+**AUTHENTICATED IDENTITY** (from System A token):
+
+```
+studentId, verifiedName, founder, enrollment/status,
+permissions, authentication timestamp, token expiry
+```
+
+**OS SESSION** (created by the OS after validation):
+
+```
+sessionId, startedAt, lastActivity, current session duration,
+status, banked duration, logout/finalization state
+```
+
+Restarting the OS does not create a new identity. An expired authentication token does not corrupt historical study time.
+
+### 30.5 — Heartbeat Distinguishes Auth from Activity
+
+The 30-second heartbeat must answer:
+
+> **"Is this authenticated OS session still valid, and is the user still active?"**
+
+- Identity was established at authentication time.
+- The heartbeat maintains session liveness.
+- If System A temporarily goes down, the OS must **NOT** destroy the user's current session or reset TRUST to null.
+
+**Degraded state rules:**
+
+| State | Behavior |
+|---|---|
+| **Unauthenticated** | No verified session → redirect to System A |
+| **Authenticated + connected** | Full operation |
+| **Authenticated + temporarily disconnected** | Retain existing session per expiry/grace rules. Show degraded connectivity state. Do NOT manufacture or erase identity. |
+
+### 30.6 — Logout/Time Banking Is Idempotent
+
+Logout must produce **exactly one final banking event.**
+
+If the browser fires logout twice, the network retries, or the request is duplicated, the system must NOT bank the same session twice.
+
+**Implementation:**
+
+```
+finalizationId = UUID or session-specific nonce
+```
+
+System A must treat duplicate finalization requests (same `sessionId + finalizationId`) as the same transaction.
+
+**Rules:**
+- Checkpoint = save state (fired on interval/tab-hide)
+- Logout/finalization = bank accumulated duration **exactly once**
+
+### 30.7 — Direct OS Access (Unauthenticated vs Disconnected)
+
+Two different states must be distinguished:
+
+| State | Behavior |
+|---|---|
+| **Unauthenticated** | User has no verified session → redirect to System A |
+| **Authenticated but temporarily disconnected** | Retain existing OS session per expiry/grace rules. Show degraded connectivity. Do NOT manufacture or erase identity. |
+
+**Do NOT destroy the local UI just because System A is temporarily unreachable.**
+
+---
+
+## 31. Token Protocol Specification
+
+### 31.1 — Token Claims (JWT Payload)
+
+```json
+{
+  "sub": "RFX-00127",
+  "name": "Leeroy Chirwa",
+  "founder": true,
+  "status": "ACTIVE",
+  "printTrust": "trusted",
+  "enrolled": [1,2,3,4,5,6,7,8,9,10,11,12,13],
+  "iat": 1692453600,
+  "exp": 1692453900,
+  "jti": "unique-token-id"
+}
+```
+
+### 31.2 — Verification Endpoint
+
+```
+POST /api/verify-token
+Body: { token: "<jwt>" }
+Response: {
+  valid: true,
+  studentId: "RFX-00127",
+  verifiedName: "Leeroy Chirwa",
+  founder: true,
+  status: "ACTIVE",
+  trust: { score: 95, restricted: false },
+  printTrust: "trusted",
+  enrolled: [1,2,3,4,5,6,7,8,9,10,11,12,13]
+}
+```
+
+### 31.3 — Error Responses
+
+| Scenario | Response |
+|---|---|
+| Expired token | `{ valid: false, error: "expired" }` |
+| Forged/malformed token | `{ valid: false, error: "invalid" }` |
+| Revoked token | `{ valid: false, error: "revoked" }` |
+| Wrong student | `{ valid: false, error: "identity_mismatch" }` |
+| System A down | OS enters degraded state, retains existing session |
+
+---
+
+## 32. Implementation Phases
+
+### Phase 1 — System A (Lee)
+
+- [ ] Generate asymmetric signing keys (RS256 or EdDSA)
+- [ ] Define exact token claims/schema (see §31.1)
+- [ ] Generate short-lived auth credentials after successful login
+- [ ] Build `/api/verify-token` endpoint
+- [ ] Add key rotation/versioning (`kid` header)
+- [ ] Test: valid, expired, malformed, forged, wrong-student, revoked credentials
+- [ ] HTTPS enforced on all auth endpoints
+
+### Phase 2 — OS (Lee + Buffy)
+
+- [ ] Capture credential from URL param or HTTP-only cookie
+- [ ] Remove credential from URL immediately (`history.replaceState`)
+- [ ] Validate via `/api/verify-token`
+- [ ] Create OS session ONLY after successful validation
+- [ ] Populate identity from verified response (not from localStorage)
+- [ ] Reject direct unauthenticated access → redirect to System A
+- [ ] Implement degraded state (System A unreachable = retain session, show warning)
+
+### Phase 3 — Session Lifecycle
+
+- [ ] Heartbeat: 30s ping to System A (auth check + activity signal)
+- [ ] Checkpoint: save session state on interval/tab-hide (does NOT bank time)
+- [ ] Temporary System A outage handling (grace period, degraded state)
+- [ ] Logout: finalization with idempotent banking (sessionId + finalizationId)
+- [ ] Exactly-once time finalization on System A side
+- [ ] Re-login / session replacement (new token = new session, old one finalized)
+
+### Phase 4 — Regression Test Matrix
+
+- [ ] Founder authenticates → 100% Excellent standing
+- [ ] Normal student authenticates → correct trust score
+- [ ] Forged token → rejected
+- [ ] Expired token → rejected
+- [ ] Missing token → redirected to System A
+- [ ] Academy/System A temporarily unavailable → existing authenticated session persists
+- [ ] Founder logout → another student login → **no founder identity/trust leakage**
+- [ ] Duplicate logout → **no double banking**
+- [ ] Page refresh → same OS session, not a new session
+- [ ] Close/reopen → correct session recovery rules
+- [ ] Direct `/os/` access → cannot bypass authentication
+- [ ] Token removed from URL after capture (browser history clean)
+- [ ] localStorage contains NO tokens (only session metadata)
+- [ ] Forged `S.handoff.founder=true` in localStorage → trust bar stays "—" (no verified identity)
+
+---
+
 *Document created: 19 August 2026 · Founder-approved architecture*
+*Security hardening added: 19 August 2026 · Founder-reviewed security requirements*
