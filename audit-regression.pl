@@ -747,7 +747,7 @@ print "\n[24] The Hidden Accumulation — bonus chapter with elite sub-deck, rev
     local $/; my $os = <$oh>; close $oh;
     ok($os =~ /chId === BONUS_CHAPTER\.id/ ? "lesson player resolves the bonus chapter" : fail("renderLesson bonus resolution missing"));
     ok($os =~ /if \(ch\.bonus\) return CHAPTERS\.every\(isComplete\);/ ? "unlock gate: all 13 complete reveals it" : fail("bonus unlock gate missing"));
-    ok($os =~ /hidden-reveal/ && $os =~ /Enter The Accumulation/ ? "journey reveal node present (between ch13 and the exam)" : fail("journey reveal node missing"));
+    ok($os =~ /hidden-reveal/ && $os =~ /Enter The Accumulation|Begin The Accumulation|Re-enter The Accumulation/ ? "journey reveal node present (between ch13 and the exam)" : fail("journey reveal node missing"));
     ok($os =~ /awardBadge\(ch, \"gem\"\)/ && $os =~ /Accumulator/ ? "Accumulator badge awarded on pass" : fail("gem badge award missing"));
     ok($os =~ /CHAPTERS\.length \* examQuestionsPerCh/ ? "exam paper tier-aware — bonus never inflates the 13-chapter count" : fail("exam count reference missing"));
     ok(-f "$OS/assets/case/frame-1.png" && -f "$OS/assets/case/frame-2.png" ? "case-study receipts staged locally (local-only guarantee holds)" : fail("case screenshots missing"));
