@@ -134,7 +134,7 @@ input, select, textarea { font-family: inherit; }
 .lc-done {
   flex-shrink: 0; font-size: 13px; color: #9fe3bd; text-align: left;
   border: 1px solid rgba(126, 226, 164, .35); background: rgba(126, 226, 164, .06);
-  padding: 9px 14px; border-radius: 10px; max-width: 320px;
+  padding: 9px 14px; border-radius: 10px; min-width: 280px; max-width: 320px;
 }
 @media (max-width: 720px) {
   .launch-countdown { flex-wrap: wrap; }

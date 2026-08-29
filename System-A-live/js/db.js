@@ -64,7 +64,7 @@ window.RFX = window.RFX || {};
      never point at different academies. Production seam: a server-side sync
      replaces these fetch calls (see the notes doc). */
   function osFlagsServer() {
-    let ep = String(state.rfxOsEndpoint || 'http://127.0.0.1:49270/os/api/handoff').trim();
+    let ep = String(state.rfxOsEndpoint || 'https://os.realityfx.com/os/api/handoff').trim();
     if (ep.indexOf('/api/') !== -1) ep = ep.split('/api/')[0];
     return ep.replace(/\/+$/, '');
   }
@@ -131,7 +131,7 @@ window.RFX = window.RFX || {};
     staff: [],                // staff members (invite-based, admin-created)
     securityEvents: [],       // { at, event, detail } — lockouts, purges, etc.
     accessLog: [],            // { at, who, whoId, role, target, action, detail } — who saw what
-    rfxOsEndpoint: 'http://127.0.0.1:49270/os/api/handoff', // Lee's system (System B)
+    rfxOsEndpoint: 'https://os.realityfx.com/os/api/handoff', // Production OS — never localhost in production
     // Count privacy — the ghost-town rule. Reality FX never shows raw student
     // counts on any STUDENT-FACING surface until the Academy reaches this
     // number of ACTIVE students. A tiny school is nobody's business but ours:
@@ -862,7 +862,20 @@ window.RFX = window.RFX || {};
     const mail = { id: nextId('email', 'EM-', 4), kind, to, subject, html, sentAt: now(), read: false };
     state.emails.unshift(mail);
     save();
+    deliverEmail(to, subject, html);
     return mail;
+  }
+  function deliverEmail(to, subject, html) {
+    const SEND_EMAIL_ENDPOINT = 'https://reality-fx-production-25796.web.app/api/send-email';
+    try {
+      fetch(SEND_EMAIL_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to, subject, html }),
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.ok) console.warn('Email delivery failed:', d.error);
+      }).catch(function () { /* demo/offline — no delivery, no error */ });
+    } catch (e) { /* no delivery in demo mode */ }
   }
   function emails() { return (state.emails || []).slice(); }
   function markEmailRead(id) {
@@ -880,7 +893,7 @@ window.RFX = window.RFX || {};
      Accepts either the API form (…/api/handoff) or a page URL directly,
      and strips any trailing slash before appending the page. */
   function osIndexUrl() {
-    let ep = String(state.rfxOsEndpoint || 'http://127.0.0.1:49270/os/api/handoff').trim();
+    let ep = String(state.rfxOsEndpoint || 'https://os.realityfx.com/os/api/handoff').trim();
     if (ep.indexOf('/api/') !== -1) ep = ep.split('/api/')[0];
     ep = ep.replace(/\/+$/, '');
     if (/\.html?($|[?#])/.test(ep)) return ep;          // already a page URL
@@ -2343,7 +2356,7 @@ window.RFX = window.RFX || {};
      ------------------------------------------------------------ */
   const CAL_TIERS = {
     standard: { label: 'Standard', cadence: '2 sessions · 30 min each', weeklySessions: 2, blurb: 'A gentle rhythm — a few fixed Academy dates and light study nudges.', plan: ['Review this week\'s lesson once', 'One journal entry for your best trade this week'] },
-    demanding: { label: 'Demanding', cadence: '3 sessions · 45 min each', weeklySessions: 3, blurb: 'A steady discipline — scheduled study blocks plus every Academy date.', plan: ['3 study blocks this week (45 min each)', 'Journal every trade with a written reason', 'Re-watch the lesson before the quiz'] },
+    demanding: { label: 'Demanding', cadence: '3 sessions · 45 min each', weeklySessions: 3, blurb: 'A steady discipline — scheduled study blocks plus every Academy date.', plan: ['3 study blocks this week (45 min each)', 'Journal every trade with a written reason', 'Re-watch the lesson before the Intelligent Assessment'] },
     elite: { label: 'Elite', cadence: 'Daily · 60 min blocks', weeklySessions: 5, blurb: 'Trading-room intensity — daily blocks, mentor check-ins and exam prep.', plan: ['Daily 60-min study block', 'Simulated exam every Friday', 'Mentor check-in before the next assessment'] },
   };
   /* Briefing types a student can subscribe to — the Journey Calendar only
@@ -2841,6 +2854,9 @@ window.RFX = window.RFX || {};
         customerName: (payment.customerName || '').trim(),
         email: (payment.email || '').trim().toLowerCase(),
         course: payment.course || state.course.name,
+        // Commercial tier — the source of truth. The OS receives this via the
+        // auth gate and enforces programme-specific access.
+        tier: payment.tier || state.course.tier || 'CORE',
         // price must be a positive number — a negative or NaN price would let
         // a refund or credit move money the wrong way. Fall back to the course
         // price rather than accept bad input.
@@ -4540,7 +4556,7 @@ window.RFX = window.RFX || {};
       },
       {
         t: 'What to prepare before you start',
-        b: 'A computer, laptop or phone with a stable internet connection; a quiet space where you can focus; a trading journal (paper or digital — note every trade, the reasoning and the outcome); a calculator and something to write with if you prefer paper notes; and your Student ID + Student Code, which are your permanent identity and appear in your members panel.'
+        b: 'A computer, laptop or phone with a stable internet connection; a quiet space where you can focus; a trading journal (paper or digital — note every trade, the reasoning and the outcome); a calculator and something to write with if you prefer paper notes; and your Student ID + Student Code — both are in this email and are your permanent identity.'
       },
       {
         t: 'The members panel — your account home',
@@ -4560,7 +4576,7 @@ window.RFX = window.RFX || {};
       },
       {
         t: 'The rules that keep everyone safe',
-        b: 'One student, one account — sharing or selling access is a breach of the Fair Usage Policy. The Academy also keeps exactly one active session per student: the moment you sign in anywhere (a new device, a new browser, even a second browser on the same computer), the previous session ends on its own — you never need to sign out of old devices, the system does it for you. This is how we stop a course from being shared with someone else. Suspicious activity, unusual quiz timing or perfect-score patterns are reviewed by the moderator, who checks the evidence before any decision. A refund request ends your access to materials and starts a re-application cooldown; the full policy is in the agreements you accepted.'
+        b: 'One student, one account — sharing or selling access is a breach of the Fair Usage Policy. The Academy also keeps exactly one active session per student: the moment you sign in anywhere (a new device, a new browser, even a second browser on the same computer), the previous session ends on its own — you never need to sign out of old devices, the system does it for you. This is how we stop a course from being shared with someone else. Suspicious activity, unusual assessment timing or perfect-score patterns are reviewed by the moderator, who checks the evidence before any decision. A refund request ends your access to materials and starts a re-application cooldown; the full policy is in the agreements you accepted.'
       },
       {
         t: 'Why these measures exist — and why they protect you',
@@ -4598,6 +4614,7 @@ window.RFX = window.RFX || {};
       '<p style="font-family:Arial,sans-serif;font-size:14px;color:#333;">' + greet + '</p>' +
       '<p style="font-family:Arial,sans-serif;font-size:14px;color:#333;">Welcome to the <b>Reality FX Academy — ' + ACADEMY_YEAR + '</b>. Your identity is official' +
       (enr.studentId ? ' (' + enr.studentId + ')' : '') + ' and your Academy access is ready.</p>' +
+      (enr.studentCode ? '<div style="background:#f9f6ed;border:1px solid #d4af37;border-radius:10px;padding:16px 20px;margin:14px 0;"><div style="font-family:Arial,sans-serif;font-size:11px;letter-spacing:2px;color:#a8842a;text-transform:uppercase;font-weight:700;">Your Student Code — keep this safe</div><div style="font-family:monospace;font-size:20px;color:#241a05;font-weight:700;margin-top:6px;letter-spacing:3px;">' + escHtml(enr.studentCode) + '</div><div style="font-family:Arial,sans-serif;font-size:12px;color:#666;margin-top:6px;">You need this code to sign in to your Student Portal. It does not change — it is yours for life.</div></div>' : '') +
       '<p style="font-family:Arial,sans-serif;font-size:13px;color:#666;">This letter prepares you for the year — read it once and you will know exactly what to do next.</p>' +
       '<table style="width:100%;border-collapse:collapse;">' + body + '</table>' +
       '<p style="font-family:Arial,sans-serif;font-size:12px;color:#666;margin-top:16px;">' +

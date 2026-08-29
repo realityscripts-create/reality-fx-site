@@ -62,16 +62,21 @@
             <label>Email <span class="req">*</span></label>
             <input class="input" id="f-email" type="email" placeholder="student@example.com">
           </div>
+          <div class="field">
+            <label>Programme tier <span class="req">*</span></label>
+            <select class="select" id="f-tier"></select>
+            <div class="hint">Selecting a tier auto-fills the course name and price below.</div>
+          </div>
           <div class="grid2">
             <div class="field">
               <label>Course</label>
-              <input class="input" id="f-course" value="Reality Academy — Professional Program">
+              <input class="input" id="f-course" value="Reality FX — CORE">
             </div>
             <div class="field">
               <label>Amount paid <span class="req">*</span></label>
               <div style="display:flex;gap:8px;">
                 <input class="input" id="f-currency" value="R" style="width:52px;text-align:center;">
-                <input class="input" id="f-price" type="number" value="3510" step="0.01">
+                <input class="input" id="f-price" type="number" value="2600" step="0.01">
               </div>
             </div>
           </div>

@@ -58,6 +58,24 @@
     const sel = document.getElementById('f-method');
     sel.innerHTML = db.getSettings().course.paymentMethods.map(m => '<option>' + ui.esc(m) + '</option>').join('');
   }
+  /* Tier dropdown — populated from the frozen commercial structure. */
+  function fillTiers() {
+    const sel = document.getElementById('f-tier');
+    if (!sel) return;
+    const tiers = db.getSettings().tiers || [];
+    sel.innerHTML = tiers.map(t =>
+      '<option value="' + t.id + '" data-name="' + ui.esc(t.name) + '" data-price="' + t.price + '">' +
+      t.id + ' — ' + ui.esc(t.name) + ' · R' + t.price.toLocaleString() + '</option>'
+    ).join('');
+    const def = tiers.findIndex(t => t.id === 'CORE');
+    if (def >= 0) sel.selectedIndex = def;
+    sel.addEventListener('change', function () {
+      const opt = sel.options[sel.selectedIndex];
+      if (opt && opt.dataset.name) document.getElementById('f-course').value = opt.dataset.name;
+      if (opt && opt.dataset.price) document.getElementById('f-price').value = opt.dataset.price;
+    });
+    sel.dispatchEvent(new Event('change'));
+  }
   function readForm() {
     const name = document.getElementById('f-name').value.trim();
     const email = document.getElementById('f-email').value.trim();
@@ -65,10 +83,13 @@
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { ui.toastErr('Please enter a valid email address.'); return null; }
     const price = parseFloat(document.getElementById('f-price').value);
     if (!(price > 0)) { ui.toastErr('Please enter a valid amount.'); return null; }
+    const tierSel = document.getElementById('f-tier');
+    const tier = tierSel ? tierSel.value : (db.getSettings().course.tier || 'CORE');
     return {
       customerName: name,
       email,
       course: document.getElementById('f-course').value.trim() || db.getSettings().course.name,
+      tier: tier,
       price,
       currency: document.getElementById('f-currency').value.trim() || 'R',
       paymentMethod: document.getElementById('f-method').value,
@@ -118,7 +139,7 @@
     const pick = WEBHOOK_POOL[Math.floor(Math.random() * WEBHOOK_POOL.length)];
     document.getElementById('f-name').value = pick.name;
     document.getElementById('f-email').value = pick.email;
-    document.getElementById('f-price').value = 3510;
+    document.getElementById('f-price').value = 2600;
     document.getElementById('f-txn').value = 'PP-' + Date.now() + '-' + Math.floor(Math.random() * 1e6);
     onCreate();
     ui.toast('PayPal webhook simulated — payment approved, System A enrolled ' + pick.name + ', invoice + registration email fired automatically. See the Mailbox.', 'info');
@@ -958,6 +979,7 @@
   /* ================= init ================= */
   function init() {
     fillMethods();
+    fillTiers();
     document.getElementById('btn-create').addEventListener('click', onCreate);
     document.getElementById('btn-demo').addEventListener('click', onDemo);
     document.getElementById('btn-webhook').addEventListener('click', onWebhook);
