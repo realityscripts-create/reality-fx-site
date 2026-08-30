@@ -5,7 +5,7 @@
 
 ---
 
-## SYSTEM A — LEE (Last updated: 30 Aug 2026, 14:00 SAST)
+## SYSTEM A — LEE (Last updated: 30 Aug 2026, 17:00 SAST)
 
 ### 🟢 Production URL Cleanup — COMPLETE (30 Aug 2026)
 
@@ -30,8 +30,8 @@ All localhost, Netlify preview URLs, and development URLs removed from student-f
 5. **JABARI-05-MINDSET.html** — Student mindset & discipline
 6. **JABARI-06-OPENING.html** — Academy opening message
 
-**Status:** Content complete. Quality audited. Ready for Founder review.
-**Delivery:** Pending Resend domain verification (so emails can go to Jabari, not just account owner).
+**Status:** Content complete. Quality audited. Delivered to external addresses.
+**Delivery:** ✅ Gmail SMTP pipeline proven — all 6 guides sent to davidchirwa20@gmail.com AND leeroychirwa16@gmail.com (12/12 delivered).
 
 ### 🟢 Resend API Key — NEW + WORKING (30 Aug 2026, 14:30 SAST)
 
@@ -46,6 +46,37 @@ New key configured and deployed. Email pipeline verified end-to-end.
 **Sender:** `onboarding@resend.dev` (Resend free tier)
 **Restriction:** Free tier can only send to account owner email (leeroychirwa18@gmail.com)
 **To send to students:** Need domain verification at https://resend.com/domains
+
+### 🟢 Gmail SMTP — FULLY OPERATIONAL (30 Aug 2026, 16:50 SAST)
+
+**BREAKTHROUGH:** Email pipeline now delivers to EXTERNAL addresses via Gmail SMTP.
+
+**Configuration:**
+- **Service:** Gmail SMTP via nodemailer
+- **Account:** leeroychirwa18@gmail.com (2FA enabled, App Password generated)
+- **Sender:** Reality FX Academy <leeroychirwa18@gmail.com>
+- **Provider priority:** Gmail SMTP → Resend fallback
+
+**Test evidence:**
+1. `POST /sendEmail` → `"ok":true,"provider":"gmail"` — external address `davidchirwa20@gmail.com` ✅
+2. All 6 Jabari emails sent to BOTH `davidchirwa20@gmail.com` AND `leeroychirwa16@gmail.com` ✅
+3. **12/12 emails delivered — zero failures** ✅
+
+**Jabari emails delivered:**
+- 📧 JABARI-01-WELCOME — Priority Onboarding welcome ✅
+- 📧 JABARI-02-WHAT-TO-EXPECT — Academy structure guide ✅
+- 📧 JABARI-03-PREPARATION-GUIDE — Pre-semester checklist ✅
+- 📧 JABARI-04-FIRST-DAYS — Opening week walkthrough ✅
+- 📧 JABARI-05-MINDSET — Trading mindset & discipline ✅
+- 📧 JABARI-06-OPENING — Academy opening message ✅
+
+**Additional fixes this session:**
+- Converted openOs + verifyToken from v2 to v1 Cloud Functions (eliminates Cloud Run billing issue)
+- All 7 functions now deploy as v1 — full deploy succeeds with zero errors
+- Fixed `.env` GMAIL_USER from `realityfx20@gmail.com` → `leeroychirwa18@gmail.com`
+- All production URLs verified clean (zero localhost/Netlify references)
+
+**Resend retained as fallback.** When domain is verified, Resend becomes primary again.
 
 ---
 
