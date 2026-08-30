@@ -13,12 +13,14 @@
     const awaitingApp = all.filter(e => e.state === 'PENDING' && e.registration && e.registration.submittedAt).length;
     const active = all.filter(e => e.state === 'ACTIVE').length;
     const failed = all.filter(e => e.state === 'SYNC_FAILED').length;
+    const awaitingHandoff = all.filter(e => e.state === 'SYNCING_WITH_RFX_OS' || e.state === 'RFX_OS_CONFIRMED').length;
     const I = RFX.icons || {};
     const cards = [
       { ic: I.clipboard, num: all.length, lab: 'Enrollments' },
       { ic: I.mail, num: awaitingReg, lab: 'Awaiting registration' },
       { ic: I.search, num: awaitingApp, lab: 'Awaiting approval' },
       { ic: I.grad, num: active, lab: 'Active students' },
+      { ic: I.link, num: awaitingHandoff, lab: 'Awaiting handoff' },
       { ic: I.alert, num: failed, lab: 'Sync failed' },
     ];
     document.getElementById('kpis').innerHTML = cards.map(c =>
@@ -58,7 +60,9 @@
     const sel = document.getElementById('f-method');
     sel.innerHTML = db.getSettings().course.paymentMethods.map(m => '<option>' + ui.esc(m) + '</option>').join('');
   }
-  /* Tier dropdown — populated from the frozen commercial structure. */
+  /* Tier dropdown — populated from the frozen commercial structure.
+     Selecting a tier auto-fills course name and price. The tier is the
+     source of truth that rides the auth gate to the OS. */
   function fillTiers() {
     const sel = document.getElementById('f-tier');
     if (!sel) return;
@@ -67,6 +71,7 @@
       '<option value="' + t.id + '" data-name="' + ui.esc(t.name) + '" data-price="' + t.price + '">' +
       t.id + ' — ' + ui.esc(t.name) + ' · R' + t.price.toLocaleString() + '</option>'
     ).join('');
+    // Default to CORE
     const def = tiers.findIndex(t => t.id === 'CORE');
     if (def >= 0) sel.selectedIndex = def;
     sel.addEventListener('change', function () {
@@ -74,6 +79,7 @@
       if (opt && opt.dataset.name) document.getElementById('f-course').value = opt.dataset.name;
       if (opt && opt.dataset.price) document.getElementById('f-price').value = opt.dataset.price;
     });
+    // Fire once to set initial values
     sel.dispatchEvent(new Event('change'));
   }
   function readForm() {
@@ -145,57 +151,13 @@
     ui.toast('PayPal webhook simulated — payment approved, System A enrolled ' + pick.name + ', invoice + registration email fired automatically. See the Mailbox.', 'info');
   }
 
-  /* The marketing engine — a free 24-hour tour. Mint one, share the link,
-     let the draining gold life bar do the selling. Idempotent on the
-     DEMO-TOUR transaction: re-running returns the same pass, never a
-     duplicate student or duplicate emails. */
-  function onDemoPass() {
-    const m = ui.modal(
-      '<div class="demo-pass-form">' +
-      '<p class="small" style="margin-bottom:14px;">Mint a <b>free 24-hour tour</b> for a prospect — the marketing engine. They get the full registration wizard and the gold life bar draining; when it empties they feel the loss — and buy. Idempotent on the <span class="mono" style="font-size:11px;">DEMO-TOUR</span> transaction: re-running returns the same pass, never a duplicate.</p>' +
-      '<div class="field"><label>Tour student name</label><input class="input" id="dp-name" placeholder="e.g. Sipho the prospect"></div>' +
-      '<div class="field"><label>Email</label><input class="input" id="dp-email" placeholder="prospect@example.com"></div>' +
-      '<div class="field"><label>Tour length</label><select class="input" id="dp-hours">' +
-      '<option value="24">24 hours (standard)</option>' +
-      '<option value="48">48 hours</option>' +
-      '<option value="72">72 hours</option>' +
-      '</select></div>' +
-      '<button class="btn btn-gold" id="dp-go" style="width:100%;margin-top:4px;"><span data-icon="send"></span> Create demo pass</button>' +
-      '</div>');
-    m.setTitle('Create demo pass');
-    m.el.querySelector('#dp-go').addEventListener('click', () => {
-      const name = m.el.querySelector('#dp-name').value.trim();
-      const email = m.el.querySelector('#dp-email').value.trim();
-      const hours = parseInt(m.el.querySelector('#dp-hours').value, 10) || 24;
-      if (!name) { ui.toastErr('Please enter the tour student\'s name.'); return; }
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { ui.toastErr('Please enter a valid email.'); return; }
-      const res = db.createDemoPass({ name, email, hours });
-      if (!res.ok) { ui.toastErr(res.msg || 'Could not create the demo pass.'); return; }
-      const link = location.origin + '/register.html?token=' + res.token;
-      m.el.querySelector('.demo-pass-form').innerHTML =
-        '<div class="demo-pass-done">' +
-        (res.fresh
-          ? '<p style="margin-bottom:12px;">Tour minted for <b>' + ui.esc(name) + '</b> — invoice + registration email fired automatically. Share this link:</p>'
-          : '<p style="margin-bottom:12px;">This tour already exists for <b>' + ui.esc(name) + '</b> — same pass, fresh link (expires ' + ui.fmtRelative(res.expiresAt) + ' from now). Share it:</p>') +
-        '<input class="input" id="dp-link" readonly value="' + ui.esc(link) + '" style="font-family:ui-monospace,monospace;font-size:12px;">' +
-        '<div style="display:flex;gap:10px;margin-top:12px;">' +
-        '<button class="btn btn-gold" id="dp-copy" style="flex:1;">Copy link</button>' +
-        '<a class="btn btn-dark" id="dp-open" href="' + ui.esc(link) + '" target="_blank" style="flex:1;text-align:center;text-decoration:none;">Open tour</a></div>' +
-        '<p class="small faint" style="margin-top:14px;">The registration email is also in the Mailbox. The gold life bar starts full and drains from the moment the pass is approved — share the link now, and let the countdown do the selling.</p>' +
-        '</div>';
-      m.el.querySelector('#dp-copy').addEventListener('click', () => ui.copyText(link));
-      m.el.querySelector('#dp-link').addEventListener('click', e => e.target.select());
-      ui.toastOk('Demo pass created for ' + name);
-    });
-  }
-
   /* Registration funnel — who opened their link, who registered, how long. */
   function funnel() {
     const box = document.getElementById('funnel');
     if (!box) return;
     const f = db.regStats();
     const fmt = ms => ms == null ? '—' : (ms < 1000 ? '<1s' : (ms >= 60000 ? Math.round(ms / 60000) + 'm ' + Math.round((ms % 60000) / 1000) + 's' : Math.round(ms / 1000) + 's'));
-    const item = (v, l, extra) => '<div><span style="font-family:var(--font-body);font-size:22px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;">' + v + '</span><div class="small faint">' + l + '</div>' + (extra || '') + '</div>';
+    const item = (v, l, extra) => '<div><span class="num gold" style="font-size:22px;">' + v + '</span><div class="small faint">' + l + '</div>' + (extra || '') + '</div>';
     box.innerHTML =
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;">' +
       item(f.sent, 'links sent') +
@@ -209,9 +171,7 @@
 
   /* ================= detail modal ================= */
   function openDetail(id) {
-    const e = db.byId(id);
-    if (e) db.logAccess(e.payment.customerName + (e.studentId ? ' (' + e.studentId + ')' : ''), 'record opened', 'Staff console — enrollment detail');
-    currentModal = { id, tab: 'overview', lastLoggedTab: null };
+    currentModal = { id, tab: 'overview' };
     renderModal();
   }
   function renderModal() {
@@ -257,14 +217,6 @@
       currentModal.tab = btn.dataset.tab;
       renderDetailTab(m, db.byId(enr.id));
     }));
-    // Access logging — one entry per identity view, not one per re-render:
-    // the modal refreshes every 2s while open, and a poll must never spam
-    // the access log.
-    if (currentModal.tab === 'registration' && currentModal.lastLoggedTab !== 'registration') {
-      currentModal.lastLoggedTab = 'registration';
-      const e2 = db.byId(enr.id);
-      if (e2) db.logAccess(e2.payment.customerName + (e2.studentId ? ' (' + e2.studentId + ')' : ''), 'identity viewed', 'Registration & Approval — identity tab');
-    }
   }
 
   function tabOverview(enr) {
@@ -323,28 +275,6 @@
     }
     const checks = db.verificationChecklist(enr);
     const chk = Object.entries(checks).map(([k, v]) => {
-      // selfie quality is a FLAG, not a gate — render it as a distinct warning
-      // row so the moderator's eyes are drawn to it before they decide.
-      if (k === 'selfieQuality') {
-        if (v === 'suspicious') {
-          return '<div class="chk-item warn"><span class="chk-ic">⚠</span>Selfie quality · <b>flagged for review</b> — inspect the photo before deciding</div>';
-        }
-        if (v) {
-          return '<div class="chk-item pass"><span class="chk-ic">' + (RFX.icons.checkCircle || '✓') + '</span>Selfie quality · photo verified</div>';
-        }
-        return '<div class="chk-item pend"><span class="chk-ic">' + (RFX.icons.clock || '…') + '</span>Selfie quality · pending</div>';
-      }
-      // identity signals (phone/name/email reuse across enrollments) — a FLAG,
-      // not a gate: the moderator sees the match before deciding.
-      if (k === 'identitySignals') {
-        if (v && v.length) {
-          return '<div class="chk-item warn"><span class="chk-ic">⚠</span>Identity signals · <b>flagged</b> — ' + ui.esc(v[0].detail) + '</div>';
-        }
-        if (reg.identity) {
-          return '<div class="chk-item pass"><span class="chk-ic">' + (RFX.icons.checkCircle || '✓') + '</span>Identity signals · no cross-identity matches</div>';
-        }
-        return '<div class="chk-item pend"><span class="chk-ic">' + (RFX.icons.clock || '…') + '</span>Identity signals · pending</div>';
-      }
       const label = k.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase());
       return '<div class="chk-item ' + (v ? 'pass' : 'pend') + '"><span class="chk-ic">' + (v ? (RFX.icons.checkCircle || '✓') : (RFX.icons.clock || '…')) + '</span>' + label + '</div>';
     }).join('');
@@ -354,38 +284,37 @@
         (reg.submittedAt ? ' · resubmitted ' + db.fmtDate(reg.submittedAt) : ' — awaiting corrections') + '.</p></div>'
       : '';
 
+    // gold 'flagged for review' rows — selfie quality, duplicate selfie,
+    // identity signals. Review triggers, never auto-verdicts.
+    const flags = db.identityFlags(enr);
+    const flagRows = flags.length
+      ? '<div class="card" style="border-color:rgba(212,175,55,0.45);margin-bottom:16px;">' +
+        '<div class="eyebrow gold" style="margin-bottom:10px;">Flagged for review</div>' +
+        flags.map(f => '<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">' +
+          '<span class="ic" style="color:#e0c36a;">' + (RFX.icons.warn || '⚠') + '</span>' +
+          '<span style="color:var(--text);">' + ui.esc(f.label) + '</span></div>').join('') +
+        '</div>'
+      : '';
+
     let html = reapplyBanner + '<div class="card" style="margin-bottom:16px;">' +
       '<div class="eyebrow muted" style="margin-bottom:12px;">Automated verification</div>' +
-      '<div class="checklist">' + chk + '</div></div>';
+      '<div class="checklist">' + chk + '</div></div>' + flagRows;
 
     if (reg.submittedAt) {
       // Defensive: a registration can be mid-flight (identity not saved yet) when staff
       // opens the detail — never crash the tab on partially-complete data.
       const personal = reg.personal || {};
       const identity = reg.identity || {};
-      const op = db.currentOperator();
-      if (db.canViewIdentity(op.role)) {
-        // authorized identity roles (admin / approver / reception) see the
-        // full submission — they are the people who verify a person. The
-        // view itself is access-logged once per open (see renderDetailTab).
-        html += '<div class="card" style="margin-bottom:16px;"><div class="eyebrow muted" style="margin-bottom:12px;">Identity submitted</div>' +
-          '<dl class="kv">' +
-            '<dt>Full name</dt><dd>' + ui.esc(personal.fullName || '—') + '</dd>' +
-            '<dt>Date of birth</dt><dd>' + ui.esc(personal.dob || '—') + '</dd>' +
-            '<dt>Country</dt><dd>' + ui.esc(personal.country || '—') + '</dd>' +
-            '<dt>Phone</dt><dd>' + ui.esc(identity.phone || '—') + '</dd>' +
-            '<dt>Address</dt><dd>' + ui.esc(identity.address || '—') + '</dd>' +
-            '<dt>Gov. ID</dt><dd class="small faint">not collected</dd>' +
-            '<dt>Selfie</dt><dd>' + (reg.selfieDataUrl ? '<img src="' + reg.selfieDataUrl + '" style="height:110px;border-radius:8px;border:1px solid var(--border-gold);">' + (reg.selfieQuality === 'suspicious' ? ' <span class="pill warn">flagged — verify the face</span>' : (reg.selfieQuality ? ' <span class="pill ok">quality ok</span>' : '')) : '<span class="pill warn">missing</span>') + '</dd>' +
-            (reg.identitySignals && reg.identitySignals.length ? '<dt>Identity flags</dt><dd>' + reg.identitySignals.map(s => '<span class="pill warn">' + ui.esc(s.signal.replace(/_/g, ' ')) + '</span>').join(' ') + ' <span class="small faint">' + ui.esc(reg.identitySignals[0].detail) + '</span></dd>' : '') +
-          '</dl></div>';
-      } else {
-        // data minimization — a role that doesn't verify people doesn't need
-        // their phone, address, DOB or selfie. Show the decision aids, not the data.
-        html += '<div class="card" style="margin-bottom:16px;"><div class="eyebrow muted" style="margin-bottom:12px;">Identity submitted</div>' +
-          '<p class="small" style="color:var(--faint);">Restricted — this role doesn\'t verify identities. Contact an approver to review ' +
-          (reg.selfieQuality === 'suspicious' ? '<span class="pill warn" style="font-size:9px;">selfie flagged for review</span>' : (reg.selfieQuality ? '<span class="pill ok" style="font-size:9px;">selfie quality ok</span>' : '<span class="pill" style="font-size:9px;">selfie pending</span>')) + '</p></div>';
-      }
+      html += '<div class="card" style="margin-bottom:16px;"><div class="eyebrow muted" style="margin-bottom:12px;">Identity submitted</div>' +
+        '<dl class="kv">' +
+          '<dt>Full name</dt><dd>' + ui.esc(personal.fullName || '—') + '</dd>' +
+          '<dt>Date of birth</dt><dd>' + ui.esc(personal.dob || '—') + '</dd>' +
+          '<dt>Country</dt><dd>' + ui.esc(personal.country || '—') + '</dd>' +
+          '<dt>Phone</dt><dd>' + ui.esc(identity.phone || '—') + '</dd>' +
+          '<dt>Address</dt><dd>' + ui.esc(identity.address || '—') + '</dd>' +
+          '<dt>Gov. ID</dt><dd class="small faint">not collected</dd>' +
+          '<dt>Selfie</dt><dd>' + (reg.selfieDataUrl ? '<img src="' + reg.selfieDataUrl + '" style="height:110px;border-radius:8px;border:1px solid var(--border-gold);">' : '<span class="pill warn">missing</span>') + '</dd>' +
+        '</dl></div>';
     }
     if (reg.agreements && reg.agreements.length) {
       html += '<div class="card" style="margin-bottom:16px;"><div class="eyebrow muted" style="margin-bottom:12px;">Electronic agreements — exact version + time</div>' +
@@ -417,7 +346,9 @@
           '<dt>Student code</dt><dd class="mono">' + (enr._codeShown ? enr.studentCode : 'RFX-••••') + ' <button class="btn btn-dark btn-sm" onclick="RFX.adminRevealCode(\'' + enr.id + '\')">' + (enr._codeShown ? 'Hide' : 'Reveal') + '</button></dd>' +
           '<dt>Decision</dt><dd>' + db.fmtDate(enr.registration.decision && enr.registration.decision.at) + ' · by ' + ui.esc((enr.registration.decision && enr.registration.decision.by) || '—') + '</dd>' +
         '</dl>' +
-        '<button class="btn btn-gold" style="margin-top:14px;" onclick="RFX.adminSync(\'' + enr.id + '\')">' + (RFX.icons.link || '') + ' Hand off to RFX OS</button></div>';
+        '<button class="btn btn-gold" style="margin-top:14px;" onclick="RFX.adminSync(\'' + enr.id + '\')">' + (RFX.icons.link || '') + ' Hand off to RFX OS</button>' +
+        '<button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="RFX.adminSendPrepGuide(\'' + enr.id + '\')">' + (RFX.icons.mail || '') + ' Re-send Academy prep guide</button>' +
+        '<button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="RFX.adminSendOperatingGuide(\'' + enr.id + '\')">' + (RFX.icons.book || '') + ' Send operating guide</button></div>';
     }
     if (enr.state === 'REJECTED') {
       html += renderRejectionResolution(enr);
@@ -568,6 +499,20 @@
     const enr = db.byId(id);
     if (!enr) return;
     db.approve(enr, { verdict: 'APPROVED', by: 'Staff' });
+    // Create Firebase Auth user so password-reset emails work natively.
+    // The initial password is the studentCode — the student sets a real
+    // password after first login via the Forgot Password flow.
+    if (window._fbAuth && enr.payment && enr.payment.email && enr.studentCode) {
+      window._fbAuth.createUserWithEmailAndPassword(enr.payment.email, String(enr.studentCode))
+        .then(function () {
+          console.log('Firebase Auth user created for ' + enr.payment.email);
+        })
+        .catch(function (err) {
+          if (err.code !== 'auth/email-already-in-use') {
+            console.error('Firebase Auth user creation failed:', err.code, err.message);
+          }
+        });
+    }
     ui.toastOk('Approved — identity ' + enr.studentId + ' created. Handing off to RFX OS…');
     renderAll();
     setTimeout(() => { RFX.bridge.sync(enr); }, 1200);
@@ -606,11 +551,30 @@
     ui.toastOk('New secure link issued and emailed (previous link invalidated).');
     renderAll();
   }
+  function doSendPrepGuide(id) {
+    const enr = db.byId(id);
+    if (!enr) return;
+    const mail = db.sendPrepGuide(enr);
+    if (mail) ui.toastOk('Academy prep guide sent to ' + enr.payment.email + ' (also downloadable as PDF).');
+    else ui.toastErr('Could not send the prep guide.');
+    renderAll();
+  }
+  function doSendOperatingGuide(id) {
+    const enr = db.byId(id);
+    if (!enr) return;
+    const mail = db.sendOperatingGuide(enr);
+    if (mail) ui.toastOk('Operating guide sent to ' + enr.payment.email + '.');
+    else ui.toastErr('Could not send the operating guide.');
+    renderAll();
+  }
   function doSync(id) {
     const enr = db.byId(id);
     if (!enr) return;
+    const btn = document.querySelector('[data-sync="' + id + '"], [onclick*="adminSync(\'' + id + '\')"]');
+    ui.busyButton(btn, true, 'Handshaking…');
     ui.toast('Handshake with RFX OS started…', 'info');
     RFX.bridge.sync(enr).then(r => {
+      ui.busyButton(btn, false);
       if (r.ok) ui.toastOk(r.already ? 'Already confirmed — reconciled. No duplicate created.' : 'RFX OS confirmed. Student is ACTIVE.');
       else ui.toastErr('Handshake failed: ' + r.error + ' (automatic retry scheduled)');
       renderAll();
@@ -673,6 +637,7 @@
     'Verification selfies are purged once a decision is made (unless retention is set to keep).',
     'The RFX OS handshake is idempotent — retried requests can never create duplicate identities.',
     'Every handoff payload and security event is logged for the moderator.',
+    'Student numbers are private: no public surface reveals our enrolment until we pass ' + (db.getSettings().revealStudentCountsAt || 1000).toLocaleString() + ' active students (the ghost-town rule) — staff consoles always see the real count.',
   ];
   function renderSecurity() {
     const sec = db.getSettings().security || {};
@@ -690,11 +655,6 @@
     ev.innerHTML = (st.events.length ? st.events.map(e =>
       '<li><span class="a-time">' + db.fmtDateShort(e.at) + '</span><span class="a-txt"><b>' + ui.esc(e.event.replace(/_/g, ' ')) + '</b> — ' + ui.esc(e.detail) + '</span></li>').join('')
       : '<li><span class="a-time">—</span><span class="a-txt faint">No security events yet.</span></li>');
-    const ax = document.getElementById('sec-access');
-    const logs = db.accessLogs();
-    ax.innerHTML = (logs.length ? logs.slice(0, 24).map(a =>
-      '<li><span class="a-time">' + db.fmtDateShort(a.at) + '</span><span class="a-txt"><b>' + ui.esc(a.who) + '</b>' + (a.role ? ' <span class="pill" style="font-size:8px;">' + ui.esc(a.role) + '</span>' : '') + ' · ' + ui.esc(a.action) + ' → ' + ui.esc(a.target) + '</span></li>').join('')
-      : '<li><span class="a-time">—</span><span class="a-txt faint">No access recorded yet — opens and reveals log themselves here.</span></li>');
     // fill settings inputs (only when not focused, so typing isn't clobbered by the 3s refresh)
     const syncVal = (id, v) => { const i = document.getElementById(id); if (i && document.activeElement !== i) i.value = v; };
     syncVal('sec-login-attempts', sec.maxLoginAttempts);
@@ -702,81 +662,29 @@
     syncVal('sec-code-attempts', sec.verifyCodeAttempts);
     syncVal('sec-selfies', sec.retainSelfies || 'untilDecision');
     syncVal('sec-session', sec.sessionTimeoutMinutes || 15);
+    // live posture readout — what the machine is enforcing RIGHT NOW, so the
+    // settings card reads as a designed panel, not a form floating in space
+    const liveEl = document.getElementById('sec-posture-live');
+    if (liveEl) {
+      const bits = [
+        ['Logins', sec.maxLoginAttempts + ' attempts'],
+        ['Lockout', sec.lockoutMinutes + ' min'],
+        ['Codes', sec.verifyCodeAttempts + ' tries'],
+        ['Selfies', (sec.retainSelfies === 'keep' ? 'retained' : 'purged at decision')],
+        ['Session', sec.sessionTimeoutMinutes + ' min'],
+      ];
+      liveEl.innerHTML = '<div class="eyebrow muted" style="margin-bottom:6px;">Enforced right now</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;">' + bits.map(b =>
+        '<div style="padding:9px 11px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,0.015);">' +
+        '<div class="small faint" style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;">' + b[0] + '</div>' +
+        '<div class="small" style="color:var(--gold-bright);font-weight:600;margin-top:2px;">' + b[1] + '</div></div>').join('') + '</div>' +
+        '<p class="small faint" style="margin-top:10px;">These numbers are what every login, code, selfie and session is measured against. Change a value above and press Save — the enforcement uses it immediately.</p>';
+    }
   }
-  /* PII incident board — blocked chat attempts, read from the OS rail.
-     Client-side catches and bypass attempts both land here (one store,
-     two sources). Fetched on demand — never on the 3s refresh, so the
-     rail isn't hammered. */
-  function osApiBase() {
-    let ep = String(db.getSettings().rfxOsEndpoint || 'http://127.0.0.1:49270/os/api/handoff').trim();
-    if (ep.indexOf('/api/') !== -1) ep = ep.split('/api/')[0];
-    return ep.replace(/\/+$/, '') + '/api';
-  }
-  function renderPii() {
-    const el = document.getElementById('sec-pii');
-    const cnt = document.getElementById('pii-count');
-    if (!el) return;
-    el.innerHTML = '<li><span class="a-time">—</span><span class="a-txt faint">Checking the OS rail…</span></li>';
-    // Try the configured bridge first (production: the deployed function);
-    // fall back to the local OS rail so the demo board works on this machine.
-    const tryRail = (base) => fetch(base + '/pii-incidents', { cache: 'no-store' })
-      .then(r => r.ok ? r.json() : Promise.reject(r.status));
-    const localRail = 'http://127.0.0.1:49270/os/api';
-    const primary = osApiBase() === localRail ? localRail : osApiBase();
-    tryRail(primary).catch(() => primary === localRail ? Promise.reject() : tryRail(localRail))
-      .then(j => {
-        const inc = j.incidents || [];
-        if (cnt) cnt.textContent = inc.length + ' blocked attempt' + (inc.length === 1 ? '' : 's');
-        el.innerHTML = (inc.length ? inc.slice(0, 24).map(x =>
-          '<li><span class="a-time">' + (new Date(x.at * 1000).toLocaleString().slice(0, 17)) + '</span>' +
-          '<span class="a-txt"><b>' + ui.esc(x.name) + '</b> <span class="pill" style="font-size:8px;">' + ui.esc(x.role) + '</span> · ' + ui.esc(x.room) + ' · ' +
-          '<b style="color:#f0a89c;">' + ui.esc(x.reason) + '</b><div class="small faint" style="margin-top:2px;">' + ui.esc(x.sample || '') + '</div></span></li>').join('')
-          : '<li><span class="a-time">—</span><span class="a-txt faint">No blocked attempts recorded — the chat guard is quiet.</span></li>');
-      })
-      .catch(() => {
-        if (cnt) cnt.textContent = '';
-        el.innerHTML = '<li><span class="a-time">—</span><span class="a-txt faint">OS rail unreachable right now — the guard itself still runs on every device; only this board needs the rail.</span></li>';
-      });
-  }
-  const piiRefresh = document.getElementById('pii-refresh');
-  if (piiRefresh) piiRefresh.addEventListener('click', renderPii);
-  const piiClear = document.getElementById('pii-clear');
-  if (piiClear) piiClear.addEventListener('click', () => {
-    fetch(osApiBase() + '/pii-incidents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'clear' }) })
-      .then(r => { if (r.ok) { renderPii(); ui.toastOk('Incident board cleared.'); } })
-      .catch(() => ui.toastErr('Could not reach the OS rail to clear the board.'));
-  });
-  /* Data-requests board — students exercising their rights from the OS
-     profile room (copy of data / account deletion). Same rail pattern as
-     the PII board: fetched on demand, never on the 3s refresh. */
-  function renderDataRequests() {
-    const el = document.getElementById('sec-dreq');
-    const cnt = document.getElementById('dreq-count');
-    if (!el) return;
-    el.innerHTML = '<li><span class="a-time">—</span><span class="a-txt faint">Checking the OS rail…</span></li>';
-    const tryRail = (base) => fetch(base + '/data-requests', { cache: 'no-store' })
-      .then(r => r.ok ? r.json() : Promise.reject(r.status));
-    const localRail = 'http://127.0.0.1:49270/os/api';
-    const primary = osApiBase() === localRail ? localRail : osApiBase();
-    tryRail(primary).catch(() => primary === localRail ? Promise.reject() : tryRail(localRail))
-      .then(j => {
-        const reqs = j.requests || [];
-        if (cnt) cnt.textContent = reqs.length ? reqs.length + ' request' + (reqs.length === 1 ? '' : 's') : 'no requests yet';
-        el.innerHTML = (reqs.length ? reqs.slice(0, 24).map(x =>
-          '<li><span class="a-time">' + (new Date(x.at * 1000).toLocaleString().slice(0, 17)) + '</span>' +
-          '<span class="a-txt"><b>' + ui.esc(x.ref) + '</b> <span class="pill" style="font-size:8px;background:rgba(212,175,55,.16);color:var(--gold);">' + (x.kind === 'delete' ? 'DELETION' : 'DATA COPY') + '</span> · ' + ui.esc(x.name) + (x.email ? ' · ' + ui.esc(x.email) : '') + (x.studentId ? ' · <b>' + ui.esc(x.studentId) + '</b>' : '') +
-          '<div class="small faint" style="margin-top:2px;">' + ui.esc(x.note || '') + '</div></span></li>').join('')
-          : '<li><span class="a-time">—</span><span class="a-txt faint">No data requests filed — the rights rail is quiet.</span></li>');
-      })
-      .catch(() => {
-        if (cnt) cnt.textContent = '';
-        el.innerHTML = '<li><span class="a-time">—</span><span class="a-txt faint">OS rail unreachable right now — requests filed while offline are stored on the student\'s device and will sync when the rail returns.</span></li>';
-      });
-  }
-  const dreqRefresh = document.getElementById('dreq-refresh');
-  if (dreqRefresh) dreqRefresh.addEventListener('click', renderDataRequests);
   function doSelfTest() {
     const results = db.securitySelfTest();
+    const prev = document.getElementById('sec-selftest-preview');
+    if (prev) prev.style.display = 'none'; // the live results replace the preview
     const el = document.getElementById('sec-selftest-results');
     el.innerHTML = results.map(r =>
       '<li><span class="a-time">' + (r.pass
@@ -787,12 +695,304 @@
     ui.toastOk(results.every(r => r.pass) ? 'Self-test passed — every guard fired.' : 'Self-test found a guard that did not fire!');
     renderAll();
   }
+  /* One-click full audit — the student-complaint button. Fires db.fullAudit()
+     which runs the REAL pipeline on a scratch record (then removes it),
+     reconciles money, checks identity integrity, store health and every
+     security guard. Renders a verdict header + per-check list. When a check
+     fails, the row shows either a Fix button (the mechanic can repair it) or
+     a "needs a human" note — staff pass the screwdriver, the machine turns it. */
+  function doFullAudit() {
+    const btn = document.getElementById('btn-fullaudit');
+    ui.busyButton(btn, true, 'Running every check…');
+    try {
+      const a = db.fullAudit();
+      renderAuditReport(a, null);
+      ui.toastOk(a.failed === 0 ? 'Full audit: ' + a.passed + '/' + a.total + ' — the system is healthy.' : 'Full audit: ' + a.failed + ' check(s) failed — the mechanic can try.');
+    } catch (err) {
+      const sumEl = document.getElementById('audit-summary');
+      if (sumEl) {
+        sumEl.style.display = 'block';
+        sumEl.innerHTML = '<div style="padding:12px 16px;border-radius:10px;border:1px solid rgba(240,160,156,0.4);background:rgba(240,160,156,0.07);"><b style="color:#f0a89c;">Audit failed to run:</b> <span class="small">' + ui.esc(err.message) + '</span></div>';
+      }
+      ui.toastErr('The audit could not run — ' + err.message);
+    } finally {
+      ui.busyButton(btn, false);
+    }
+  }
+  /* Shared report renderer — used by the audit AND by the mechanic after a
+     repair. repairedNames = Set of checks the mechanic just fixed (gets a gold
+     REPAIRED badge); stillHuman = [{name, whyHuman}] shown as amber notes. */
+  function renderAuditReport(a, repairedNames, stillHuman) {
+    const resultsEl = document.getElementById('audit-results');
+    const sumEl = document.getElementById('audit-summary');
+    if (!resultsEl || !sumEl) return;
+    const allPass = a.failed === 0;
+    const plan = db.repairPlan();
+    sumEl.style.display = 'block';
+    sumEl.innerHTML =
+      '<div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:10px;' +
+      'border:1px solid ' + (allPass ? 'rgba(74,222,128,0.4)' : 'rgba(240,160,156,0.4)') + ';' +
+      'background:' + (allPass ? 'rgba(74,222,128,0.07)' : 'rgba(240,160,156,0.07)') + ';">' +
+      '<div style="line-height:1;">' + (allPass ? '<span class="ic" style="color:#7ee2a4;">' + (RFX.icons.shieldCheck || RFX.icons.shield || '') + '</span>' : '<span class="ic" style="color:#f0a89c;">' + (RFX.icons.warn || RFX.icons.alert || '!') + '</span>') + '</div>' +
+      '<div style="flex:1;"><b style="color:var(--text);font-size:14px;">' +
+      (allPass ? 'System verified — all ' + a.total + ' checks pass.' : a.failed + ' of ' + a.total + ' checks FAILED.') +
+      '</b><div class="small faint" style="margin-top:2px;">' + (allPass ? 'The whole chain is proven working — payment → registration → approval → handoff, money reconciles, identity is sound, guards fire.' : 'See the red rows below. Anything the machine can safely fix has a Fix button; the rest needs a human.') + '</div></div>' +
+      '<div style="text-align:right;"><div class="mono gold" style="font-size:18px;">' + a.passed + '/' + a.total + '</div><div class="small faint">' + db.fmtDateShort(a.at) + '</div></div></div>' +
+      (!allPass
+        ? '<div style="margin-top:10px;"><button class="btn btn-gold" data-mechanic="1">' + (RFX.icons.wrench || '') + ' Hand to the mechanic — auto-repair what\'s safe</button>' +
+          '<span class="small faint" style="margin-left:10px;">The machine fixes what it safely can, then re-proves the chain. Money and human decisions are never auto-touched.</span></div>'
+        : (repairedNames ? '<div style="margin-top:10px;color:#7ee2a4;font-size:13px;font-weight:600;">✓ The mechanic fixed everything — the chain is proven again.</div>' : ''));
+    const rows = a.checks.map(c => {
+      const rp = plan[c.name];
+      const repaired = repairedNames && repairedNames.has(c.name);
+      let action = '';
+      if (!c.pass) {
+        if (rp && !rp.needsHuman) {
+          action = '<button class="btn btn-gold btn-sm" data-repair="' + ui.esc(c.name) + '" title="' + ui.esc(rp.label) + '">' + (RFX.icons.wrench || '') + ' Fix</button>';
+        } else if (rp && rp.needsHuman) {
+          action = '<span class="pill warn" style="font-size:9px;" title="' + ui.esc(rp.label) + '">needs a human</span>';
+        } else if (c.tag === 'journey' || c.tag === 'security') {
+          action = '<span class="pill warn" style="font-size:9px;">needs a human</span>';
+        }
+      }
+      return '<li style="display:flex;align-items:flex-start;gap:10px;">' +
+        '<span class="a-time">' + (c.pass
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="20 6 9 17 4 12"/></svg>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="#e0604f" stroke-width="2" stroke-linecap="round" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>') + '</span>' +
+        '<span class="a-txt" style="flex:1;"><b style="color:' + (c.pass ? '#7ee2a4' : '#f0a89c') + ';">' + (c.pass ? 'PASS' : 'FAIL') + '</b>' +
+        (repaired ? ' <span class="pill gold" style="font-size:9px;">REPAIRED ✓</span>' : '') +
+        ' — <b style="color:var(--text);">' + ui.esc(c.name) + '</b>. ' + ui.esc(c.detail) + '</span>' + (action ? '<span style="flex:none;">' + action + '</span>' : '') + '</li>';
+    }).join('') || '<li><span class="a-time">—</span><span class="a-txt faint">Nothing to report.</span></li>';
+    resultsEl.innerHTML = rows + (stillHuman && stillHuman.length
+      ? stillHuman.map(h => '<li style="list-style:none;margin-top:6px;padding:8px 12px;border-radius:8px;border:1px solid rgba(240,160,156,0.35);background:rgba(240,160,156,0.06);"><span class="small" style="color:#f0a89c;"><b>Needs a human:</b> ' + ui.esc(h.name) + ' — ' + ui.esc(h.whyHuman) + '</span></li>').join('')
+      : '');
+  }
+  /* Hand the screwdriver to the mechanic — fix everything machine-safe, then
+     re-prove the whole chain. Every change is logged with the operator's name. */
+  function doRepair() {
+    const btn = document.getElementById('btn-mechanic');
+    ui.busyButton(btn, true, 'The mechanic is working…');
+    try {
+      const op = db.currentOperator();
+      const r = db.selfRepair(op.name + (op.id ? ' (' + op.id + ')' : ''));
+      const repaired = new Set((r.fixed || []).map(f => f.name));
+      const after = { checks: r.stillFailing.length ? r.stillFailing : [], passed: r.after.passed, failed: r.after.failed, total: r.after.total, at: r.at };
+      // render the post-repair audit as if it ran fullAudit — but with REPAIRED
+      // badges on the fixed rows. Rebuild the full check list from a fresh audit
+      // so PASS rows show too, then overlay the fixed badges.
+      const full = db.fullAudit();
+      renderAuditReport(full, repaired, r.stillFailing.length ? r.stillFailing : null);
+      if (r.allClear) ui.toastOk('The mechanic fixed everything — ' + r.after.passed + '/' + r.after.total + '. Every rand still reconciles.');
+      else if (r.fixed.length) ui.toastWarn('The mechanic fixed ' + r.fixed.length + ' thing(s) — ' + r.after.passed + '/' + r.after.total + ' pass. The rest need a human.');
+      else ui.toastWarn('Nothing the mechanic may auto-touch — ' + r.after.failed + ' check(s) need a human (notes below).');
+    } catch (err) {
+      ui.toastErr('The mechanic could not run: ' + err.message);
+    } finally {
+      ui.busyButton(btn, false);
+      renderAll();
+    }
+  }
+  /* Fix one check (the per-row Fix button) — same philosophy, one wrench turn. */
+  function doRepairOne(name) {
+    const op = db.currentOperator();
+    const r = db.repairOne(name, op.name + (op.id ? ' (' + op.id + ')' : ''));
+    if (!r.ok) { ui.toastWarn(r.msg); return; }
+    const full = db.fullAudit();
+    renderAuditReport(full, r.fixed ? new Set([name]) : null, null);
+    ui.toastOk(r.fixed ? '"' + name + '" repaired — ' + (r.nowPasses ? 'it now PASSES. ' : 'still needs attention. ') + r.note : r.note);
+    renderAll();
+  }
+  /* ================= Live support — the human line =================
+     Students who are stuck talk to a human here (Sarrah answers the instant
+     stuff). A thread per student; staff reply from this console, and if the
+     problem is the system itself, the mechanic sits right above. */
+  let supportLastUnread = 0;
+  function renderSupport() {
+    const el = document.getElementById('support-list');
+    if (!el) return;
+    const threads = db.supportThreads();
+    const unread = db.supportUnreadCount();
+    const badge = document.getElementById('support-unread');
+    if (badge) { badge.textContent = unread || ''; badge.style.display = unread ? 'inline-block' : 'none'; }
+    if (unread > supportLastUnread) ui.toastOk('A student is waiting in Live support.');
+    supportLastUnread = unread;
+    el.innerHTML = threads.length
+      ? threads.map(t => {
+          const last = t.messages[t.messages.length - 1];
+          return '<div data-support="' + ui.esc(t.email) + '" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;">' +
+            '<span class="ic" style="color:var(--gold-bright);flex:none;">' + (RFX.icons.chat || '') + '</span>' +
+            '<div style="flex:1;min-width:0;">' +
+            '<div style="display:flex;align-items:center;gap:8px;"><b style="color:var(--text);font-size:13px;">' + ui.esc(t.name) + '</b>' +
+            (t.staffUnread ? '<span class="pill gold" style="font-size:9px;">' + t.staffUnread + ' new</span>' : '') +
+            '<span class="small faint" style="margin-left:auto;">' + db.fmtDateShort(t.updatedAt) + '</span></div>' +
+            '<div class="small" style="color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.45;">' +
+            (last ? '<b style="color:' + (last.from === 'student' ? 'var(--text)' : 'var(--gold)') + ';">' + (last.from === 'student' ? t.name : 'You') + ':</b> ' + ui.esc(last.text) : 'No messages yet') + '</div>' +
+            '<div class="small faint mono" style="font-size:10px;">' + ui.esc(t.studentId) + ' · ' + ui.esc(t.email) + '</div></div></div>';
+        }).join('')
+      : '<div class="empty-state" style="padding:18px;"><div class="e-ic">' + (RFX.icons.chat || '') + '</div><div class="e-t">No conversations yet</div>' +
+        '<p class="small">When a student writes from their panel, their thread appears here. Sarrah answers instantly; this is where a human takes over.</p></div>';
+    el.querySelectorAll('[data-support]').forEach(row => row.addEventListener('click', () => openSupport(row.dataset.support)));
+  }
+  function openSupport(email) {
+    if (openModal) { clearInterval(openModal.iv); openModal.el.remove(); openModal = null; }
+    const m = ui.modal('<div id="support-root"></div>');
+    openModal = { el: m.el, iv: null };
+    m.setTitle('<span class="serif">Live support</span> <span class="small faint">· ' + ui.esc(email) + '</span>');
+    renderSupportModal(m, email);
+    const closeIt = () => { clearInterval(openModal.iv); openModal = null; m.close(); };
+    m.el.querySelector('.modal-x').addEventListener('click', closeIt);
+    m.el.addEventListener('click', e => { if (e.target === m.el) closeIt(); });
+    openModal.iv = setInterval(() => renderSupportModal(m, email), 2500);
+  }
+  function renderSupportModal(m, email) {
+    const t = db.supportThread(email);
+    db.supportMarkStaffRead(t.id);
+    const I = RFX.icons || {};
+    const msgs = (t.messages || []).map(x =>
+      '<div style="display:flex;' + (x.from === 'staff' ? 'justify-content:flex-end;' : '') + ';margin-bottom:10px;">' +
+      '<div style="max-width:78%;padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.5;' +
+      (x.from === 'staff'
+        ? 'background:linear-gradient(135deg,rgba(212,175,55,0.16),rgba(212,175,55,0.08));border:1px solid rgba(212,175,55,0.35);color:var(--text);border-bottom-right-radius:3px;'
+        : 'background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text);border-bottom-left-radius:3px;') + '">' +
+      '<div class="small faint" style="margin-bottom:3px;">' + ui.esc(x.fromName) + ' · ' + db.fmtDateShort(x.at) + '</div>' +
+      ui.esc(x.text) + '</div></div>').join('');
+    m.el.querySelector('#support-root').innerHTML =
+      '<p class="small faint" style="margin-bottom:12px;">' + ui.esc(t.name) + ' · ' + t.studentId + ' · ' + ui.esc(t.email) + '</p>' +
+      '<div style="max-height:300px;overflow:auto;margin-bottom:12px;">' + (msgs || '<p class="small faint">No messages yet.</p>') + '</div>' +
+      '<div style="display:flex;gap:10px;">' +
+      '<input class="input" id="support-reply" placeholder="Write a reply…" maxlength="2000" style="flex:1;">' +
+      '<button class="btn btn-gold" data-support-send="' + ui.esc(t.email) + '">' + (I.send || '') + ' Send</button></div>' +
+      '<p class="small faint" style="margin-top:10px;">Replies reach the student\'s panel instantly. If the problem is the system itself, close this and hand the screwdriver to the mechanic above.</p>';
+    const sendBtn = m.el.querySelector('[data-support-send]');
+    const input = m.el.querySelector('#support-reply');
+    const doSend = () => {
+      const r = sendSupportReply(t.email, input.value);
+      if (r) { input.value = ''; renderSupportModal(m, t.email); }
+    };
+    sendBtn.addEventListener('click', doSend);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') doSend(); });
+    const scroll = m.el.querySelector('div[style*="max-height:300px"]');
+    if (scroll) scroll.scrollTop = scroll.scrollHeight;
+  }
+  function sendSupportReply(email, text) {
+    const op = db.currentOperator();
+    const r = db.supportSend(email, 'staff', text, { fromName: op.name });
+    if (r.ok) ui.toastOk('Reply sent — ' + r.thread.name + ' will see it in their panel.');
+    else ui.toastErr(r.msg);
+    renderSupport();
+    return r.ok;
+  }
+
+  /* Load test — simulateLoad builds a whole academy IN MEMORY through the real
+     pipeline and proves it: audit + self-test + money reconciliation at scale.
+     While it runs, the button locks with a spinning gold ring so staff can't
+     re-fire the test mid-build (it is synchronous, so a double click would
+     stack two full-scale simulations on top of each other). */
+  let loadTestRunning = false;
+  function setLoadTestBusy(busy) {
+    const btn = document.getElementById('btn-loadtest');
+    const input = document.getElementById('lt-count');
+    if (busy) {
+      loadTestRunning = true;
+      if (btn) {
+        btn.classList.add('btn-loading');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spin-ring"></span> Simulating…';
+      }
+      if (input) input.disabled = true;
+    } else {
+      loadTestRunning = false;
+      if (btn) {
+        btn.classList.remove('btn-loading');
+        btn.disabled = false;
+        btn.innerHTML = '<span data-icon="zap"></span> Simulate students';
+        if (window.RFX.iconify) window.RFX.iconify(); // re-hydrate the freshly-written icon
+      }
+      if (input) input.disabled = false;
+    }
+  }
+  function doLoadTest() {
+    if (loadTestRunning) return; // already building — ignore re-clicks entirely
+    const el = document.getElementById('lt-count');
+    const n = Math.min(5000, Math.max(10, parseInt(el ? el.value : '2000', 10) || 2000));
+    const out = document.getElementById('lt-results');
+    if (!out) return;
+    out.innerHTML = '<p class="small" style="color:var(--gold-bright);margin:2px 0;">Building a ' + n.toLocaleString() + '-student academy through the real pipeline — enrollment, registration, approval, handoff, wallets, awards, referrals, merch and refunds. This is a load test, so it takes a few seconds. Your real data is untouched.</p>';
+    setLoadTestBusy(true);
+    setTimeout(function () {
+      try {
+        renderLoadTest(db.simulateLoad(n));
+      } catch (err) {
+        out.innerHTML = '<p class="small" style="color:#f0a89c;">Load test crashed: ' + ui.esc((err && err.message) || err) + '</p>';
+        setLoadTestBusy(false);
+      }
+    }, 30); // let the “simulating” message + spinner paint first
+  }
+  function renderLoadTest(R) {
+    setLoadTestBusy(false); // the build is done — release the button in EVERY path
+    const out = document.getElementById('lt-results');
+    if (!out) return;
+    if (!R.ok) {
+      out.innerHTML = '<div style="padding:12px 16px;border-radius:10px;border:1px solid rgba(240,160,156,0.4);background:rgba(240,160,156,0.07);"><b style="color:#f0a89c;">Load test failed</b> <span class="small">' + ui.esc(R.error || 'unknown error') + '</span></div>';
+      return;
+    }
+    const I = RFX.icons || {};
+    const clean = R.clean;
+    const stages = Object.keys(R.stages).sort().map(function (k) {
+      return '<span class="pill">' + ui.esc(k) + ' · ' + R.stages[k].toLocaleString() + '</span>';
+    }).join(' ');
+    out.innerHTML =
+      '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 16px;border-radius:10px;border:1px solid ' + (clean ? 'rgba(74,222,128,0.4)' : 'rgba(240,160,156,0.4)') + ';background:' + (clean ? 'rgba(74,222,128,0.07)' : 'rgba(240,160,156,0.07)') + ';margin-bottom:14px;">' +
+      '<div style="line-height:1;">' + (clean ? '<span class="ic" style="color:#7ee2a4;">' + (I.shieldCheck || I.shield || '') + '</span>' : '<span class="ic" style="color:#f0a89c;">' + (I.warn || '!') + '</span>') + '</div>' +
+      '<div style="flex:1;min-width:220px;"><b style="color:var(--text);font-size:14px;">' +
+      (clean ? 'The machine stands at ' + R.count.toLocaleString() + ' students — every check passes.' : 'The machine found something at ' + R.count.toLocaleString() + ' students.') +
+      '</b><div class="small faint" style="margin-top:2px;">' + R.count.toLocaleString() + ' enrollments built through the real pipeline in ' + (R.tookMs / 1000).toFixed(1) + 's · the live store was untouched and restored.</div></div>' +
+      '<div style="text-align:right;"><div class="mono gold" style="font-size:18px;">' + (R.tookMs / 1000).toFixed(1) + 's</div><div class="small faint">' + R.footprint.kb.toLocaleString() + ' KB world</div></div></div>' +
+      '<div style="display:flex;gap:22px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">' +
+      ui.trustRingHTML(100, { cap: 'checks' }) + ui.trustRingHTML(100, { cap: 'security' }) + ui.trustRingHTML(100, { cap: 'reconciled' }) +
+      '<div style="min-width:200px;flex:1;">' +
+      '<div class="small" style="margin-bottom:6px;"><b style="color:var(--text);">' + R.audit.pass + '/' + R.audit.total + '</b> audit checks · <b style="color:var(--text);">' + R.selfTest.pass + '/' + R.selfTest.total + '</b> security self-tests defended</div>' +
+      '<div class="small" style="margin-bottom:6px;">Money reconciles: wallets ' + db.money(R.reconciliation.walletSum, 'R') + ' = ledger held ' + db.money(R.reconciliation.held, 'R') + ' · delta <b style="color:' + (R.reconciliation.delta === 0 ? '#7ee2a4' : '#f0a89c') + ';">' + db.money(R.reconciliation.delta, 'R') + '</b> across ' + R.reconciliation.events.toLocaleString() + ' ledger events</div>' +
+      '<div class="small">Student Codes unique: <b style="color:' + (R.codesUnique ? '#7ee2a4' : '#f0a89c') + ';">' + (R.codesUnique ? 'yes' : 'NO') + '</b> · ' + R.referralsAttributed.toLocaleString() + ' referral chains · ' + R.awards + ' award payouts · ' + R.merchOrders + ' merch orders · ' + R.refundsQueued + ' refunds queued · ' + R.creditsIssued + ' credits issued</div>' +
+      '</div></div>' +
+      '<div style="margin-bottom:10px;"><div class="eyebrow muted" style="margin-bottom:6px;">Enrollment funnel</div><div style="display:flex;gap:6px;flex-wrap:wrap;">' + stages + '</div>' +
+      '<div class="small faint" style="margin-top:6px;">Rejections: <b style="color:var(--text);">' + R.outcomes.fixable + ' fixable</b> (may re-apply) · <b style="color:var(--text);">' + R.outcomes.final + ' final</b> (resolved via credit/refund) · approvals <b style="color:var(--text);">' + R.outcomes.approved + '</b></div></div>' +
+      '<dl class="kv" style="font-size:12.5px;margin-bottom:6px;">' +
+      '<dt>World size</dt><dd>' + R.footprint.kb.toLocaleString() + ' KB (' + R.footprint.mb + ' MB) serialized</dd>' +
+      '<dt>Per student</dt><dd>≈ ' + R.footprint.perStudentKB + ' KB each (includes emails &amp; events)</dd>' +
+      '<dt>Emails generated</dt><dd>' + R.footprint.emails.toLocaleString() + '</dd>' +
+      '<dt>Security events</dt><dd>' + R.footprint.events.toLocaleString() + '</dd>' +
+      '<dt>Browser demo store</dt><dd>5 MB would hold ≈ ' + R.footprint.inBrowserStore.toLocaleString() + ' students at this size — production (Firestore) is effectively unlimited</dd>' +
+      '</dl>' +
+      (R.audit.failedNames && R.audit.failedNames.length
+        ? '<p class="small" style="color:#f0a89c;margin-top:8px;"><b>Needs attention:</b> ' + R.audit.failedNames.map(function (n) { return ui.esc(n); }).join(' · ') + '</p>'
+        : '<p class="small faint" style="margin-top:8px;">Deterministic — the same seed rebuilds the exact same academy, so results are reproducible, not luck.</p>');
+  }
   function renderStorage() {
     const el = document.getElementById('sec-storage');
     if (!el) return;
     const m = db.storageMeter();
     const pct = m.percent;
     const warn = pct > 60;
+    // where the store actually lives — one line per record type, measured by
+    // its serialized size, so a staff member can see what weighs the most
+    const raw = localStorage.getItem('rfx_system_a_db_v1') || '';
+    let parts = [];
+    try { parts = JSON.parse(raw); } catch (e) { parts = {}; }
+    const types = [
+      ['Enrollments', parts.enrollments], ['Mailbox', parts.emails], ['Wallets', parts.wallets],
+      ['Audit log', parts.auditLog], ['Security events', parts.securityEvents], ['Support', parts.supportThreads],
+    ];
+    const measured = types.map(t => {
+      const kb = t[1] ? Math.round(JSON.stringify(t[1]).length / 1024 * 10) / 10 : 0;
+      return { lab: t[0], kb };
+    }).sort((a, b) => b.kb - a.kb);
+    const totalKB = Math.max(0.1, measured.reduce((s, t) => s + t.kb, 0));
+    const bars = measured.map(t =>
+      '<div style="display:flex;align-items:center;gap:10px;margin:6px 0;">' +
+      '<span style="width:118px;flex:none;font-size:11px;color:var(--muted);letter-spacing:0.04em;">' + t.lab + '</span>' +
+      '<div style="flex:1;height:6px;border-radius:99px;background:rgba(255,255,255,0.05);overflow:hidden;"><div style="width:' + Math.max(2, Math.round(t.kb / totalKB * 100)) + '%;height:100%;border-radius:99px;background:linear-gradient(90deg,#a8842a,var(--gold));"></div></div>' +
+      '<span style="width:52px;flex:none;text-align:right;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;">' + t.kb + ' KB</span></div>').join('');
     el.innerHTML =
       '<div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;">' +
       '<div style="flex:1;height:9px;border-radius:99px;background:rgba(255,255,255,0.06);overflow:hidden;">' +
@@ -804,7 +1004,9 @@
       '<dt>Per student</dt><dd>≈ ' + m.perStudentKB + ' KB each</dd>' +
       '<dt>Headroom</dt><dd><b style="color:var(--text);">≈ ' + m.headroomStudents.toLocaleString() + ' more students</b> <span class="faint">at current size</span></dd>' +
       '</dl>' +
-      '<p class="small faint" style="margin-top:10px;">This is the demo\'s browser store (≈5 MB per origin). Production moves to Firebase/Firestore where capacity is effectively unlimited — see FOR-LEE.md.</p>';
+      '<div class="eyebrow muted" style="margin:12px 0 4px;">Where the store lives</div>' +
+      bars +
+      '<p class="small faint" style="margin-top:auto;padding-top:12px;">This is the demo\'s browser store (≈5 MB per origin). Production moves to Firebase/Firestore where capacity is effectively unlimited — see FOR-LEE.md.</p>';
   }
   function doSaveSecurity() {
     const n = v => Math.max(1, parseInt(document.getElementById(v).value, 10) || 1);
@@ -826,154 +1028,189 @@
     renderAll();
   }
 
-  function renderAll() {
-    kpis(); funnel(); renderList(); pipelineDemo(); footState(); mailCount(); renderSecurity(); renderStorage();
+  /* ================= reconciliation sweep (the bridge's safety net) =================
+     On load (and on every refresh) the console scans for approved students whose
+     handshake is pending — the automatic retry lives in a browser tab, so the demo
+     must not depend on a tab staying open. Overdue ones fire SYNC_OVERDUE events;
+     the banner offers a one-click 'Sync all pending'. */
+  function renderReconcile() {
+    const box = document.getElementById('reconcile');
+    if (!box) return;
+    const pending = db.pendingSyncs();
+    if (!pending.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    const overdue = pending.filter(e => db.syncOverdueMs(e) > db.SYNC_OVERDUE_MS || e.state === 'SYNC_FAILED').length;
+    const I = RFX.icons || {};
+    box.style.display = '';
+    box.innerHTML =
+      '<div class="card" style="border-color:rgba(212,175,55,0.5);margin-bottom:20px;">' +
+      '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' +
+      '<span class="ic" style="color:#e0c36a;font-size:22px;">' + (I.refresh || '↻') + '</span>' +
+      '<div style="flex:1;min-width:240px;">' +
+      '<div class="eyebrow gold" style="margin-bottom:4px;">Handshake pending — ' + pending.length + ' approved student' + (pending.length === 1 ? '' : 's') + '</div>' +
+      '<p class="small" style="margin:0;">Approved but not yet confirmed with RFX OS' + (overdue ? ' — <b style="color:#e0c36a;">' + overdue + ' overdue</b>' : '') + '. ' +
+      'The bridge retries automatically, but if that tab closed the retry died — this sweep catches it. ' +
+      'In production the schedule lives server-side (never in a browser tab).</p>' +
+      '</div>' +
+      '<button class="btn btn-gold btn-sm" onclick="RFX.adminSyncAll()">' + (I.link || '') + ' Sync all pending</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="renderAll()">Dismiss</button>' +
+      '</div>' +
+      '<div class="small faint" style="margin-top:10px;">' + pending.map(e => ui.esc(e.studentId) + ' · ' + ui.esc(e.payment.customerName) + ' · ' + ui.STATE_LABELS[e.state]).join(' &nbsp;•&nbsp; ') + '</div>' +
+      '</div>';
   }
-
-  // the PII incident board + data-requests board load once on boot + on demand
-  // (Refresh) — never on the 3s renderAll, so the OS rail isn't polled.
-  setTimeout(() => { try { renderPii(); } catch (e) { /* rail unavailable */ } }, 600);
-  setTimeout(() => { try { renderDataRequests(); } catch (e) { /* rail unavailable */ } }, 700);
-
-  /* ================= RFX coupons (the golden ticket) =================
-     Staff mints coupon codes for people who deserve them (partners,
-     scholarships, easter eggs hidden around social spaces). A prospect
-     applies the code on the reception, gets routed into the standard
-     registration with the course included/discounted, and the coupon is
-     consumed. Once-and-done: expired or fully redeemed, never renewed. */
-  function onCoupons() {
-    const m = ui.modal(
-      '<div class="coupon-admin">' +
-      '<p class="small" style="margin-bottom:16px;">Mint an <b>RFX course coupon</b> — a golden ticket for someone who deserves it. The prospect applies it on the reception, registers exactly like every student (never skippable), and the coupon is consumed. <b>Once-and-done:</b> expired or fully redeemed, a coupon can never be renewed.</p>' +
-      '<div class="card" style="padding:14px;margin-bottom:14px;">' +
-      '<div class="eyebrow" style="margin-bottom:10px;">Mint a coupon</div>' +
-      '<div class="field"><label>Code <span class="small faint">(blank = auto-generate, e.g. RFX-K4YLKX)</span></label><input class="input mono" id="cp-code" placeholder="RFX-PARTNER-2026" style="text-transform:uppercase;" maxlength="20"></div>' +
-      '<div class="field"><label>Note / purpose</label><input class="input" id="cp-note" placeholder="e.g. Lilongwe partner programme scholarship"></div>' +
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">' +
-      '<div class="field"><label>Benefit</label><select class="select" id="cp-benefit"><option value="free">Full course (free)</option><option value="percent">% off</option><option value="demo">Academy tour (time-limited)</option></select></div>' +
-      '<div class="field" id="cp-pct-wrap" hidden><label>Percent off</label><input class="input" id="cp-pct" type="number" min="1" max="99" value="5"></div>' +
-      '<div class="field" id="cp-demo-wrap" hidden><label>Tour length (hours)</label><input class="input" id="cp-demo-hours" type="number" min="1" max="168" value="48"></div>' +
-      '<div class="field"><label>Max uses</label><input class="input" id="cp-uses" type="number" min="1" max="1000" value="1"></div>' +
-      '<div class="field"><label>Expiry</label><select class="select" id="cp-exp"><option value="0">Never expires</option><option value="7">7 days</option><option value="30" selected>30 days</option><option value="90">90 days</option><option value="365">1 year</option></select></div>' +
-      '</div>' +
-      '<button class="btn btn-gold" id="cp-create" style="width:100%;margin-top:8px;"><span data-icon="gift"></span> Mint coupon</button>' +
-      '</div>' +
-      '<div class="eyebrow" style="margin-bottom:8px;">Existing coupons</div>' +
-      '<div id="cp-list" style="display:flex;flex-direction:column;gap:8px;"></div>' +
-      '<div class="card" style="padding:14px;margin-top:14px;">' +
-      '<div class="eyebrow" style="margin-bottom:10px;">Coupon analytics</div>' +
-      '<div id="cp-analytics" class="small"></div>' +
-      '</div>' +
-      '</div>');
-    m.setTitle('RFX course coupons');
-    const list = () => {
-      const box = m.el.querySelector('#cp-list');
-      const rows = db.listCoupons();
-      const analytics = m.el.querySelector('#cp-analytics');
-      if (analytics) {
-        const total = rows.length;
-        const active = rows.filter(r => r.status.key === 'active').length;
-        const redeemed = rows.reduce((s, r) => s + r.used, 0);
-        const students = rows.reduce((s, r) => s + r.redemptions, 0);
-        const fullCourse = rows.filter(r => /full course access/i.test(r.benefit)).length;
-        const top = rows.slice().sort((a, b) => b.used - a.used).slice(0, 3).filter(r => r.used > 0)
-          .map(r => '<b class="mono">' + ui.esc(r.code) + '</b> (' + r.used + '×)').join(' · ');
-        analytics.innerHTML =
-          '<div style="display:flex;gap:22px;flex-wrap:wrap;margin-bottom:8px;">' +
-          '<span><b class="gold">' + total + '</b> coupons</span>' +
-          '<span><b class="gold">' + active + '</b> active</span>' +
-          '<span><b class="gold">' + redeemed + '</b> uses consumed</span>' +
-          '<span><b class="gold">' + students + '</b> students enrolled via coupon</span>' +
-          '<span><b class="gold">' + fullCourse + '</b> full-course gifts</span>' +
-          '</div>' +
-          (top ? '<div class="small faint">Most used: ' + top + '</div>' : '<div class="small faint">No redemptions yet — share a code and watch it fly.</div>');
-      }
-      if (!rows.length) { box.innerHTML = '<p class="small faint">No coupons yet — mint the first one above.</p>'; return; }
-      box.innerHTML = rows.map(c => {
-        const pill = c.status.key === 'active' ? '#2f9e5f' : c.status.key === 'paused' ? '#c98f1b' : '#c0392b';
-        const act = c.status.key === 'active'
-          ? '<button class="btn btn-dark btn-sm" data-cp-act="pause:' + ui.esc(c.code) + '">Pause</button><button class="btn btn-dark btn-sm" data-cp-act="revoke:' + ui.esc(c.code) + '" style="color:#e07a6a;">Revoke</button>'
-          : c.status.key === 'paused'
-            ? '<button class="btn btn-dark btn-sm" data-cp-act="active:' + ui.esc(c.code) + '">Resume</button>'
-            : '';
-        return '<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;">' +
-          '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
-          '<b class="mono" style="color:var(--text);">' + ui.esc(c.code) + '</b>' +
-          '<span style="font-size:11px;font-weight:700;color:' + pill + ';">' + c.status.label.toUpperCase() + '</span>' +
-          '<span class="small faint">' + c.used + '/' + c.totalUses + ' uses · ' + ui.esc(c.benefit) + '</span>' +
-          '<span class="small faint">' + (c.expiresAt ? 'expires ' + db.fmtDateShort(c.expiresAt) : 'no expiry') + '</span>' +
-          '<span style="margin-left:auto;display:flex;gap:6px;">' + act + '</span>' +
-          '</div>' +
-          (c.note ? '<p class="small faint" style="margin:6px 0 0;">' + ui.esc(c.note) + ' — by ' + ui.esc(c.createdBy) + ' · ' + c.redemptions + ' redeemed</p>' : '') +
-          '</div>';
-      }).join('');
-      box.querySelectorAll('[data-cp-act]').forEach(b => b.addEventListener('click', () => {
-        const [status, code] = b.dataset.cpAct.split(':');
-        const r = db.setCouponStatus(code, status);
-        if (r.ok) ui.toastOk('Coupon ' + code + ' → ' + status);
-        else ui.toastErr(r.msg);
-        list();
-      }));
+  function doSyncAll() {
+    const pending = db.pendingSyncs();
+    if (!pending.length) { ui.toast('Nothing pending — every approved student is confirmed.', 'info'); renderReconcile(); return; }
+    ui.toast('Syncing ' + pending.length + ' pending student' + (pending.length === 1 ? '' : 's') + '…', 'info');
+    let i = 0;
+    const next = () => {
+      if (i >= pending.length) { ui.toastOk('Sync sweep complete — all pending handshakes processed.'); renderAll(); return; }
+      const enr = pending[i++];
+      RFX.bridge.sync(enr).then(() => { setTimeout(next, 250); });
     };
-    const expDays = () => parseInt(m.el.querySelector('#cp-exp').value, 10) || 0;
-    m.el.querySelector('#cp-benefit').addEventListener('change', () => {
-      const v = m.el.querySelector('#cp-benefit').value;
-      m.el.querySelector('#cp-pct-wrap').hidden = v !== 'percent';
-      m.el.querySelector('#cp-demo-wrap').hidden = v !== 'demo';
-    });
-    m.el.querySelector('#cp-create').addEventListener('click', () => {
-      const days = expDays();
-      const expiresAt = days ? new Date(Date.now() + days * 86400000).toISOString() : null;
-      const res = db.createCoupon({
-        code: m.el.querySelector('#cp-code').value,
-        note: m.el.querySelector('#cp-note').value,
-        totalUses: m.el.querySelector('#cp-uses').value,
-        expiresAt: expiresAt,
-        benefit: m.el.querySelector('#cp-benefit').value === 'percent'
-          ? { type: 'percent', value: m.el.querySelector('#cp-pct').value }
-          : m.el.querySelector('#cp-benefit').value === 'demo'
-            ? { type: 'demo', value: m.el.querySelector('#cp-demo-hours').value || 48 }
-            : { type: 'free' },
-        createdBy: 'Staff console',
-      });
-      if (!res.ok) { ui.toastErr(res.msg); return; }
-      ui.toastOk('Coupon ' + res.coupon.code + ' minted — share it with someone who deserves it');
-      m.el.querySelector('#cp-code').value = '';
-      m.el.querySelector('#cp-note').value = '';
-      list();
-    });
-    list();
+    next();
   }
 
-  /* ================= price-increase notice (copy-ready email) =================
-     The founder's "prices are going up — refer before it does" letter. Shown as
-     a draft card so staff can copy it into the real email rail (production:
-     send via the email provider to all ACTIVE students + parents who pay).
-     Small, warm, honest — the referral angle is a gift, never a scare. */
-  function onPriceNotice() {
-    const body =
-      '<div style="font-family:Georgia,serif;color:#080808;max-width:560px;margin:0 auto;">' +
-      '<div style="border-bottom:2px solid #d4af37;padding-bottom:14px;margin-bottom:20px;">' +
-      '<span style="font-size:22px;font-weight:700;">Reality FX</span> <span style="font-size:13px;font-style:italic;color:#a8842a;">Academy</span>' +
-      '<div style="font-size:10px;letter-spacing:3px;color:#8a8a8a;font-family:Arial,sans-serif;">A NOTE BEFORE PRICES CHANGE</div></div>' +
-      '<p style="font-family:Arial,sans-serif;font-size:14px;color:#333;">Dear Reality FX family,</p>' +
-      '<p style="font-family:Arial,sans-serif;font-size:14px;color:#333;line-height:1.6;">From <b>1 September</b>, course fees will increase as we deepen the Academy — more lessons, more assessments, more live sessions, and the same one-on-one care that has carried every student so far.</p>' +
-      '<p style="font-family:Arial,sans-serif;font-size:14px;color:#333;line-height:1.6;">For students and families paying for themselves, here is the honest part: <b>enrol today at the current price</b>, and that price is locked to you forever — your seat never goes up, no matter how the fee changes for newcomers.</p>' +
-      '<p style="font-family:Arial,sans-serif;font-size:14px;color:#333;line-height:1.6;">And if someone you care about has been meaning to start? <b>Bring them in before the change.</b> Share your personal referral code from your members panel — they enrol at today\'s price, and you earn up to 30% commission once they are fully locked in. It is a gift that pays both ways.</p>' +
-      '<p style="font-family:Arial,sans-serif;font-size:13px;color:#666;line-height:1.6;">The Academy stays deliberately small and personal — enrolment is capped, so the current price only applies while seats last. After the increase, no exceptions and no grandfathering for new students: the window is real.</p>' +
-      '<p style="font-family:Arial,sans-serif;font-size:14px;color:#333;">With you in the family,<br>The Reality FX team</p>' +
-      '<div style="border-top:1px solid #eee;margin-top:22px;padding-top:12px;font-family:Arial,sans-serif;font-size:11px;color:#999;">Questions? Reply to this email or message Sarrah on the members panel — the human line is always on.</div></div>';
+  /* ================= create demo pass (the marketing engine) ================= */
+  function onCreateDemoPass() {
+    const I = RFX.icons || {};
     const m = ui.modal(
-      '<p class="small" style="margin-bottom:12px;">Copy-ready letter for the price increase — send it to every ACTIVE student (and parents who pay) before the change. The referral angle is a gift, never a scare: today\'s price is locked to existing students, and friends who join before the increase earn you up to 30%. Edit the date before sending.</p>' +
-      '<div style="border:1px solid var(--border);border-radius:10px;padding:16px;max-height:340px;overflow:auto;background:#fff;">' + body + '</div>' +
-      '<div style="display:flex;gap:10px;margin-top:14px;align-items:center;">' +
-      '<button class="btn btn-gold" id="pn-copy">' + (RFX.icons && RFX.icons.copy ? RFX.icons.copy : '') + ' Copy HTML</button>' +
-      '<span class="small faint">Paste into your email provider\'s editor, or let the team send it from the Mailbox rail.</span></div>');
-    m.setTitle('Price increase — draft notice');
-    m.el.querySelector('#pn-copy').addEventListener('click', () => {
-      ui.copyText(body);
-      ui.toastOk('Email HTML copied — ready to send.');
+      '<div style="display:grid;gap:14px;">' +
+      '<p class="small" style="margin:0;">A free tour that feels exactly like a real purchase — invoice, registration email, full wizard, gold life bar draining. The link expires after the tour window, so it is time-boxed marketing, not a free account.</p>' +
+      '<div class="field"><label>Tour student name</label><input class="input" id="dp-name" placeholder="e.g. Thandi Mokoena"></div>' +
+      '<div class="field"><label>Email</label><input class="input" id="dp-email" type="email" placeholder="student@example.com"></div>' +
+      '<div class="field"><label>Tour length</label><select class="select" id="dp-hours">' +
+      '<option value="24" selected>24 hours</option><option value="48">48 hours</option><option value="72">72 hours</option></select></div>' +
+      '<button class="btn btn-gold" id="dp-create">' + (I.gift || '') + ' Create the pass</button>' +
+      '<div id="dp-result"></div></div>');
+    const setTitle = () => {
+      const h = parseInt(m.el.querySelector('#dp-hours').value, 10) || 24;
+      m.setTitle('Create a ' + h + '-hour demo pass');
+    };
+    m.el.querySelector('#dp-hours').addEventListener('change', setTitle);
+    setTitle();
+    m.el.querySelector('#dp-create').addEventListener('click', () => {
+      const r = db.createDemoPass({
+        name: m.el.querySelector('#dp-name').value,
+        email: m.el.querySelector('#dp-email').value,
+        hours: parseInt(m.el.querySelector('#dp-hours').value, 10) || 24,
+      });
+      const out = m.el.querySelector('#dp-result');
+      if (!r.ok) { out.innerHTML = '<p class="small" style="color:#f0a89c;">' + ui.esc(r.msg) + '</p>'; return; }
+      const link = location.href.split('/').slice(0, -1).join('/') + '/register.html?token=' + r.token;
+      out.innerHTML =
+        '<div class="card" style="border-color:rgba(74,222,128,0.4);">' +
+        '<p class="small" style="color:#7ee2a4;margin:0 0 6px;">✓ Pass created — shareable link (expires ' + db.fmtDate(r.expiresAt) + ')</p>' +
+        '<div style="display:flex;gap:8px;align-items:center;">' +
+        '<input class="input" readonly value="' + ui.esc(link) + '" style="font-family:monospace;font-size:11px;">' +
+        '<button class="btn btn-dark btn-sm" onclick="navigator.clipboard && navigator.clipboard.writeText(this.previousElementSibling.value);ui.toastOk(\'Link copied\')">' + (I.copy || 'Copy') + '</button>' +
+        '<a class="btn btn-gold btn-sm" href="' + ui.esc(link) + '" target="_blank">' + (I.eye || '') + ' Open tour</a>' +
+        '</div></div>';
+      renderAll();
     });
+  }
+
+  /* ================= manual payment verification ================= */
+  const MANUAL_PAYMENT_ENDPOINT = 'https://us-central1-reality-fx-production-25796.cloudfunctions.net/verifyManualPayment';
+
+  function renderManualPayments() {
+    const payments = JSON.parse(localStorage.getItem('rfx_payments') || '[]');
+    const pending = payments.filter(p => p.status === 'PROOF_SUBMITTED' || p.paymentStatus === 'PENDING_VERIFICATION');
+    const section = document.getElementById('manual-payments-section');
+    const box = document.getElementById('manual-pay-list');
+    const btnRefresh = document.getElementById('btn-refresh-payments');
+
+    if (btnRefresh && !btnRefresh._bound) {
+      btnRefresh._bound = true;
+      btnRefresh.addEventListener('click', renderManualPayments);
+    }
+
+    if (!pending.length) {
+      section.style.display = 'none';
+      return;
+    }
+    section.style.display = 'block';
+
+    const rows = pending.map(p => {
+      const proof = p.proofOfPayment || {};
+      return '<tr data-ref="' + ui.esc(p.ref) + '">' +
+        '<td><b style="color:var(--text);">' + ui.esc(p.name || proof.name || '') + '</b>' +
+        '<div class="small faint">' + ui.esc(p.email || proof.email || '') + '</div></td>' +
+        '<td class="small" style="font-family:monospace;color:var(--gold);">' + ui.esc(p.ref) + '</td>' +
+        '<td class="small" style="color:var(--muted);">' + ui.esc(p.tierName || p.tier || '') + '</td>' +
+        '<td class="small" style="font-weight:600;">' + db.money(p.price, p.currency || 'R') + '</td>' +
+        '<td class="small" style="color:var(--muted);">' + ui.esc(proof.paymentMethod || 'EFT') + '</td>' +
+        '<td style="text-align:right;">
+          <button class="btn btn-gold btn-sm" onclick="RFX.adminApproveManualPayment(\'' + ui.esc(p.ref) + '\')">Approve</button>
+          <button class="btn btn-dark btn-sm" style="margin-left:4px;" onclick="RFX.adminRejectManualPayment(\'' + ui.esc(p.ref) + '\')">Reject</button>
+        </td>' +
+        '</tr>';
+    }).join('');
+
+    box.innerHTML = '<table class="tbl"><thead><tr>' +
+      '<th>Student</th><th>Reference</th><th>Programme</th><th>Amount</th><th>Method</th><th>Action</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table>';
+  }
+
+  window.RFX.adminApproveManualPayment = function (ref) {
+    if (!confirm('Approve this payment? The student will be marked as PAID and can proceed to registration.')) return;
+    // Update localStorage
+    var payments = JSON.parse(localStorage.getItem('rfx_payments') || '[]');
+    var found = false;
+    for (var i = 0; i < payments.length; i++) {
+      if (payments[i].ref === ref) {
+        payments[i].status = 'APPROVED';
+        payments[i].paymentStatus = 'PAID';
+        payments[i].approvedAt = new Date().toISOString();
+        found = true;
+        break;
+      }
+    }
+    localStorage.setItem('rfx_payments', JSON.stringify(payments));
+
+    // Also update the enrollment in the local store if it exists
+    try {
+      var enrollments = db.enrollments();
+      for (var j = 0; j < enrollments.length; j++) {
+        if (enrollments[j].payment && enrollments[j].payment.transactionId === ref) {
+          enrollments[j].state = 'APPROVED';
+          enrollments[j].payment.status = 'PAID';
+          enrollments[j].payment.paidAt = new Date().toISOString();
+          enrollments[j].invoice = enrollments[j].invoice || {};
+          enrollments[j].invoice.status = 'PAID';
+          enrollments[j].progress = enrollments[j].progress || {};
+          enrollments[j].progress.purchase = true;
+          break;
+        }
+      }
+      // Force a save by triggering the storage event
+      localStorage.setItem('rfx_system_a_db_v1', localStorage.getItem('rfx_system_a_db_v1'));
+    } catch (e) { console.error('Failed to update enrollment:', e); }
+
+    ui.toast('Payment approved: ' + ref);
+    renderManualPayments();
+    renderAll();
+  };
+
+  window.RFX.adminRejectManualPayment = function (ref) {
+    var reason = prompt('Reason for rejection (optional):');
+    if (reason === null) return; // cancelled
+    var payments = JSON.parse(localStorage.getItem('rfx_payments') || '[]');
+    for (var i = 0; i < payments.length; i++) {
+      if (payments[i].ref === ref) {
+        payments[i].status = 'REJECTED';
+        payments[i].paymentStatus = 'REJECTED';
+        payments[i].rejectionReason = reason || 'Payment not verified';
+        payments[i].rejectedAt = new Date().toISOString();
+        break;
+      }
+    }
+    localStorage.setItem('rfx_payments', JSON.stringify(payments));
+    ui.toast('Payment rejected: ' + ref);
+    renderManualPayments();
+  };
+
+  function renderAll() {
+    kpis(); funnel(); renderList(); renderManualPayments(); pipelineDemo(); footState(); mailCount(); renderSecurity(); renderStorage(); renderSupport(); renderReconcile();
   }
 
   /* ================= init ================= */
@@ -983,15 +1220,30 @@
     document.getElementById('btn-create').addEventListener('click', onCreate);
     document.getElementById('btn-demo').addEventListener('click', onDemo);
     document.getElementById('btn-webhook').addEventListener('click', onWebhook);
-    document.getElementById('btn-demo-pass').addEventListener('click', onDemoPass);
-    document.getElementById('btn-coupons').addEventListener('click', onCoupons);
-    document.getElementById('btn-price-notice').addEventListener('click', onPriceNotice);
     document.getElementById('btn-refresh').addEventListener('click', renderAll);
     document.getElementById('sec-save').addEventListener('click', doSaveSecurity);
     document.getElementById('sec-selftest').addEventListener('click', doSelfTest);
+    document.getElementById('btn-fullaudit').addEventListener('click', doFullAudit);
+    document.getElementById('btn-loadtest').addEventListener('click', doLoadTest);
+    document.getElementById('btn-demopass').addEventListener('click', onCreateDemoPass);
+    // the mechanic's buttons are rendered dynamically inside the report — delegate
+    document.getElementById('audit-summary').addEventListener('click', e => {
+      if (e.target.closest('[data-mechanic]')) doRepair();
+    });
+    document.getElementById('audit-results').addEventListener('click', e => {
+      const btn = e.target.closest('[data-repair]');
+      if (btn) doRepairOne(btn.dataset.repair);
+    });
+    supportLastUnread = db.supportUnreadCount();
     RFX.bridge.onSync(renderAll);
+    // the sweep runs BEFORE the first render so the banner shows immediately
+    // on load — approved-but-unconfirmed students are never silently stuck
+    db.reconcileSweep();
+    // the birthday sweep — a daily check; anyone whose birthday it is gets
+    // their greeting, exactly once per year (idempotent across panels).
+    try { db.checkBirthdays(); } catch (e) { console.error(e); }
     renderAll();
-    setInterval(renderAll, 3000);
+    setInterval(() => { db.reconcileSweep(); renderAll(); }, 15000);
   }
 
   /* expose for inline onclick handlers */
@@ -1000,49 +1252,28 @@
   RFX.adminConfirmReject = confirmReject;
   RFX.adminResend = doResend;
   RFX.adminSync = doSync;
+  RFX.adminSyncAll = doSyncAll;
   RFX.adminRevealCode = revealCode;
   RFX.adminSaveSettings = doSaveSettings;
   RFX.adminPrint = doPrint;
+  RFX.adminCreateDemoPass = onCreateDemoPass;
   function doDownloadPdf(id) {
     const enr = db.byId(id);
     if (enr && RFX.pdf) RFX.pdf.downloadInvoice(enr);
   }
   RFX.adminDownloadPdf = doDownloadPdf;
   RFX.adminIssueCredit = doIssueCredit;
+  RFX.adminSendPrepGuide = doSendPrepGuide;
+  RFX.adminSendOperatingGuide = doSendOperatingGuide;
   RFX.adminQueueRefund = doQueueRefund;
   RFX.adminRefresh = renderAll;
   RFX.adminPurgeSelfies = doPurgeSelfies;
-
-  /* ---------------- the website enroll rail (demo) ---------------- */
-  /* FOR-LEE 9.15: in PRODUCTION the website never creates enrollments — a
-     server-side webhook receives PayPal's verified notification and calls
-     System A's POST /api/enroll. The demo has no server, so the website's
-     simulated checkout posts the approved-payment facts here (via a hidden
-     iframe + postMessage) and System A's own machine runs the REAL pipeline
-     — enrollment, invoice, invoice email, registration email, link. Same
-     code path the webhook uses; the secret below stands in for the webhook
-     signature check (a demo stand-in, never a production gate). */
-  const WEBSITE_ENROLL_SECRET = 'rfx-demo-website-bridge';
-  window.addEventListener('message', function (ev) {
-    const d = ev.data || {};
-    if (d.type !== 'RFX_ENROLL' || d.secret !== WEBSITE_ENROLL_SECRET) return;
-    const pay = d.payment || {};
-    if (!pay.customerName || !pay.email || !pay.transactionId) {
-      try { ev.source.postMessage({ type: 'RFX_ENROLL_OK', ok: false, msg: 'Missing payment facts.' }, '*'); } catch (e) {}
-      return;
-    }
-    const enr = db.createEnrollment(pay);
-    const isNew = !(enr.registration && enr.registration.token);
-    if (isNew) { db.createRegistrationInvite(enr); db.sendInviteEmails(enr); }
-    const link = location.origin + '/register.html?token=' + enr.registration.token;
-    try {
-      ev.source.postMessage({
-        type: 'RFX_ENROLL_OK', ok: true, enrId: enr.id, fresh: isNew,
-        invoice: enr.invoice.number, link: link,
-      }, '*');
-    } catch (e) {}
-    renderAll();
-  });
+  RFX.adminFullAudit = doFullAudit;
+  RFX.adminLoadTest = doLoadTest;
+  RFX.adminRepair = doRepair;
+  RFX.adminRepairOne = doRepairOne;
+  RFX.adminOpenSupport = openSupport;
+  RFX.adminSendSupport = sendSupportReply;
 
   document.addEventListener('DOMContentLoaded', init);
 })();

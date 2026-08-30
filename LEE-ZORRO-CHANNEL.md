@@ -5,7 +5,40 @@
 
 ---
 
-## SYSTEM A — LEE (Last updated: 29 Aug 2026, 14:30 SAST)
+## SYSTEM A — LEE (Last updated: 30 Aug 2026, 14:00 SAST)
+
+### 🟢 Production URL Cleanup — COMPLETE (30 Aug 2026)
+
+All localhost, Netlify preview URLs, and development URLs removed from student-facing code:
+
+- **Email footer** → `realityfx.netlify.app` replaced with `realityfx.com`
+- **Email link construction** → `location.href.split()` replaced with hardcoded production base `https://reality-fx-production-25796.web.app`
+- **register.html** → `http://127.0.0.1:49270/os/index.html` replaced with `https://os.realityfx.com/os/`
+- **admin.html, wallet.html, staff.html, srm.html, mailbox.html** → all Academy links updated to `https://os.realityfx.com/os/`
+- **Jabari prep guides** → `127.0.0.1:8125/member.html` replaced with production URL
+- **?ref= vs ?token= mismatch** → register.js now handles both `?token=` and `?ref=` parameters from manual payment confirmation emails
+
+**Zero localhost/Netlify references remain in student-facing code.**
+
+### 🟡 Jabari Onboarding Package — CREATED
+
+6 professional student-facing communications created:
+1. **JABARI-01-WELCOME.html** — Welcome / Priority Onboarding email
+2. **JABARI-02-WHAT-TO-EXPECT.html** — Academy structure guide
+3. **JABARI-03-PREPARATION-GUIDE.html** — Pre-semester checklist
+4. **JABARI-04-FIRST-DAYS.html** — Opening week guide
+5. **JABARI-05-MINDSET.html** — Student mindset & discipline
+6. **JABARI-06-OPENING.html** — Academy opening message
+
+**Status:** Content complete. Quality audited. Ready for Founder review.
+**Delivery:** Pending Resend domain verification (so emails can go to Jabari, not just account owner).
+
+### 🔴 Resend API Key — EXPIRED
+
+Key `re_i3WTikWL_DpWXbnLtBuALk14FUXWS7SVv` returns 401. Need new key from https://resend.com/api-keys.
+Also need domain verification at https://resend.com/domains for student delivery.
+
+---
 
 ### 🟢 Commercial Tier Handoff — COMPLETE
 
@@ -41,6 +74,30 @@ All `rfxOsEndpoint` defaults changed from `http://127.0.0.1:49270/os/api/handoff
 **Limitation:** Free Resend tier only sends to account owner (`leeroychirwa18@gmail.com`). To send to students, verify a domain at https://resend.com/domains
 
 Frontend `deliverEmail()` now uses direct Cloud Function URL as fire-and-forget.
+
+### 🟢 Manual Payment Route — LIVE AND TESTED ✅
+
+**Deployed and verified 29 Aug 2026:**
+- `manualPayment` Cloud Function — student submits proof of payment → creates enrollment record in Firestore
+- `verifyManualPayment` Cloud Function — admin approves/rejects → enrollment moves to APPROVED → confirmation email sent
+- `payment.html` — complete student journey: programme selection → personal details → EFT instructions → proof submission → success
+- Admin panel — pending payments section with Approve/Reject buttons
+- Emails sent: enrolment confirmation to student + admin notification
+
+**Endpoints:**
+- Submit: `https://us-central1-reality-fx-production-25796.cloudfunctions.net/manualPayment`
+- Verify: `https://us-central1-reality-fx-production-25796.cloudfunctions.net/verifyManualPayment`
+
+**Flow:**
+1. Student selects programme on payment.html
+2. Fills in name + email
+3. Sees EFT payment instructions + unique reference
+4. Pays via bank transfer
+5. Submits proof of payment
+6. Admin verifies in Staff Console → Approve/Reject
+7. Student receives confirmation email → proceeds to registration
+
+**Tested:** RFX-CORE-TEST-001 → submitted → approved → enrollment created → student can register
 
 ### 🟢 Payfast Payment Integration — CODE COMPLETE
 
@@ -174,6 +231,29 @@ All 7 findings RESOLVED. Founder authorized implementation this morning.
 - 4 quiz → Intelligent Assessment replacements across student-facing copy
 
 **Data chain verified:** Admin form → readForm() → createEnrollment() → invoice email → member panel → registration welcome — all show "Reality FX — CORE" / R2,600. No legacy pricing remains in any student-facing path.
+
+### 🟢 Payment Page — Bank Details Updated
+
+Real bank details now in payment.html:
+- **South Africa:** Standard Bank, Account 10140300501, Holder: Mr Leeroy Chirwa, Branch 051-001
+- **Malawi:** National Bank of Malawi, Account 1014167028, Holder: Mr Leeroy Chirwa, Branch NBMAMWMW008
+- **Country tabs** allow students to switch between ZAR and MWK payment methods
+- Hosted at: https://reality-fx-production-25796.web.app/payment.html
+
+### 🟢 Password Recovery — Firebase Auth Native Reset
+
+- Firebase Auth SDK loaded on member.html + admin.html
+- "Forgot Password?" now uses `sendPasswordResetEmail` (Firebase native)
+- Firebase Auth users created during enrollment approval (studentCode as initial password)
+- Login syncs with Firebase Auth (fire-and-forget)
+- Custom password reset retained as fallback
+- Firebase Auth app created: `System A` (1:831526531031:web:9caaf72cb5cd90f7a2e592)
+
+### 🔴 BLOCKED — Resend API Key Expired
+
+The Resend API key `re_i3WTikWL_DpWXbnLtBuALk14FUXWS7SVv` is returning 401 (revoked/expired). Cloud Function `sendEmail` code is correct but can't deliver emails until key is refreshed.
+
+**Founder action needed:** Create a new API key at https://resend.com/api-keys and provide the full key.
 
 **Phase 2 (Chapter 1 fix):** BLOCKED — AWAITING ZORRO VERIFICATION. OS code lives in Zorro's repo.
 

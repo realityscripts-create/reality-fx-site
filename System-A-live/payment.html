@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reality FX — Enrol Now</title>
+<meta name="description" content="Choose your Reality FX programme and secure your place. Flexible payment options available.">
+<link rel="icon" href="assets/favicon.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0e0d0a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/system.css?v=20260828">
+<style>
+  .programme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  .programme-card {
+    background: rgba(16,16,16,0.95);
+    border: 1px solid rgba(201,162,39,0.2);
+    border-radius: 14px;
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.25s, box-shadow 0.25s, transform 0.2s;
+    cursor: pointer;
+  }
+  .programme-card:hover {
+    border-color: rgba(201,162,39,0.6);
+    box-shadow: 0 8px 30px rgba(201,162,39,0.15);
+    transform: translateY(-3px);
+  }
+  .programme-card.selected {
+    border-color: #E5C158;
+    box-shadow: 0 0 20px rgba(229,193,88,0.25);
+  }
+  .programme-card.recommended {
+    border-color: rgba(201,162,39,0.5);
+    position: relative;
+  }
+  .programme-card.recommended::before {
+    content: '\2605 MOST POPULAR';
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #f0d98c, #d4af37);
+    color: #0e0d0a;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 3px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .tier-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: #E5C158;
+    margin-bottom: 4px;
+  }
+  .tier-tagline {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 16px;
+  }
+  .tier-price {
+    font-size: 32px;
+    font-weight: 700;
+    color: #E5E5E5;
+    margin-bottom: 4px;
+  }
+  .tier-price .currency {
+    font-size: 18px;
+    font-weight: 500;
+    color: #888;
+  }
+  .tier-features {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0 0;
+    flex: 1;
+  }
+  .tier-features li {
+    font-size: 13px;
+    color: #b9b2a2;
+    padding: 5px 0;
+    padding-left: 22px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .tier-features li::before {
+    content: '\2713';
+    position: absolute;
+    left: 0;
+    color: #7ee2a4;
+    font-weight: 700;
+  }
+  .tier-features li.not-included {
+    color: #555;
+  }
+  .tier-features li.not-included::before {
+    content: '\2014';
+    color: #444;
+  }
+  .enrol-btn {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+    padding: 13px;
+    background: linear-gradient(135deg, #f0d98c, #d4af37 45%, #a8842a);
+    color: #241a05;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    text-align: center;
+    text-decoration: none;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .enrol-btn:hover { opacity: 0.9; }
+  .enrol-btn:disabled {
+    background: #333;
+    color: #666;
+    cursor: not-allowed;
+  }
+  .payment-form-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .payment-form-overlay.active { display: flex; }
+  .payment-form-box {
+    background: #101010;
+    border: 1px solid rgba(201,162,39,0.3);
+    border-radius: 14px;
+    padding: 32px;
+    max-width: 520px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .payment-form-box h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    color: #E5C158;
+    margin: 0 0 20px;
+  }
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 4px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .field input, .field textarea, .field select {
+    width: 100%;
+    padding: 11px 14px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    color: #E5E5E5;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    box-sizing: border-box;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    outline: none;
+    border-color: #E5C158;
+    box-shadow: 0 0 0 2px rgba(229,193,88,0.15);
+  }
+  .field textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .form-actions button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    font-family: 'Inter', sans-serif;
+  }
+  .btn-confirm {
+    background: linear-gradient(135deg, #f0d98c, #d4af37);
+    color: #241a05;
+  }
+  .btn-cancel {
+    background: rgba(255,255,255,0.06);
+    color: #888;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+  }
+  .selected-tier-label {
+    font-size: 13px;
+    color: #E5C158;
+    margin-bottom: 14px;
+    padding: 10px;
+    background: rgba(229,193,88,0.08);
+    border-radius: 8px;
+    text-align: center;
+  }
+  .secure-note {
+    text-align: center;
+    font-size: 12px;
+    color: #555;
+    margin-top: 24px;
+  }
+  .secure-note span { color: #7ee2a4; }
+
+  /* ─── Manual payment instructions ─── */
+  .payment-instructions {
+    display: none;
+    max-width: 560px;
+    margin: 30px auto;
+    background: rgba(16,16,16,0.95);
+    border: 1px solid rgba(201,162,39,0.25);
+    border-radius: 14px;
+    padding: 32px;
+  }
+  .payment-instructions.active { display: block; }
+  .payment-instructions h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: #E5C158;
+    margin: 0 0 6px;
+  }
+  .payment-instructions .sub {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 20px;
+  }
+  .eft-box {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(201,162,39,0.2);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 18px;
+  }
+  .eft-box h4 {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: #C9A227;
+    text-transform: uppercase;
+    margin: 0 0 14px;
+  }
+  .eft-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 13px;
+  }
+  .eft-row:last-child { border-bottom: none; }
+  .eft-label { color: #888; }
+  .eft-value { color: #E5E5E5; font-weight: 600; }
+  .eft-value.gold { color: #E5C158; font-size: 18px; }
+  .eft-value.mono { font-family: monospace; letter-spacing: 0.5px; }
+  .ref-highlight {
+    background: rgba(229,193,88,0.1);
+    border: 1px dashed rgba(201,162,39,0.4);
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+    margin: 14px 0;
+  }
+  .ref-highlight .label {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: #888;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .ref-highlight .ref {
+    font-family: monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: #E5C158;
+    letter-spacing: 1px;
+  }
+  .steps-list {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0;
+    counter-reset: step;
+  }
+  .steps-list li {
+    counter-increment: step;
+    font-size: 13px;
+    color: #b9b2a2;
+    line-height: 1.6;
+    padding: 6px 0 6px 36px;
+    position: relative;
+  }
+  .steps-list li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 6px;
+    width: 22px;
+    height: 22px;
+    background: rgba(229,193,88,0.15);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #E5C158;
+  }
+  .proof-section {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .proof-section h4 {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: #C9A227;
+    text-transform: uppercase;
+    margin: 0 0 14px;
+  }
+  .proof-success {
+    display: none;
+    text-align: center;
+    padding: 30px 20px;
+  }
+  .proof-success.active { display: block; }
+  .proof-success .icon { font-size: 48px; margin-bottom: 12px; }
+  .proof-success h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    color: #7ee2a4;
+    margin: 0 0 10px;
+  }
+  .proof-success p {
+    font-size: 14px;
+    color: #b9b2a2;
+    line-height: 1.7;
+    margin: 0 0 20px;
+  }
+  .proof-success .ref-display {
+    font-family: monospace;
+    font-size: 14px;
+    color: #E5C158;
+    background: rgba(229,193,88,0.08);
+    padding: 10px 16px;
+    border-radius: 8px;
+    display: inline-block;
+    margin-bottom: 16px;
+  }
+  .bank-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 18px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(201,162,39,0.25);
+  }
+  .bank-tab {
+    flex: 1;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.03);
+    color: #888;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .bank-tab.active {
+    background: rgba(229,193,88,0.12);
+    color: #E5C158;
+  }
+  .bank-tab:hover:not(.active) {
+    background: rgba(255,255,255,0.06);
+    color: #b9b2a2;
+  }
+  .bank-panel { display: none; }
+  .bank-panel.active { display: block; }
+  .currency-badge {
+    display: inline-block;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: #C9A227;
+    background: rgba(229,193,88,0.08);
+    padding: 3px 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="hero-inner">
+      <div style="display:flex;justify-content:center;margin-bottom:16px;">
+        <img src="assets/logo.svg" alt="Reality FX" class="brand-logo" style="width:220px;">
+      </div>
+      <h1 class="display">Choose Your <span class="gold">Programme</span></h1>
+      <p class="quote" style="margin-top:12px;">Select the pathway that matches your ambition. Every programme includes full Academy access — your tier determines the depth of support and the doors that open.</p>
+    </div>
+  </div>
+
+  <!-- Programme cards -->
+  <div class="section" id="programmes-section">
+    <div class="programme-grid" id="programmes"></div>
+    <p class="secure-note"><span>🔒</span> Secure payment. Your details are protected and never shared.</p>
+  </div>
+
+  <!-- Payment instructions (shown after programme selection) -->
+  <div class="payment-instructions" id="payment-instructions">
+    <div id="instructions-content">
+      <h2>Pay for Your Programme</h2>
+      <p class="sub" id="instr-sub"></p>
+
+      <!-- Reference number -->
+      <div class="ref-highlight">
+        <div class="label">Your Unique Reference</div>
+        <div class="ref" id="instr-ref"></div>
+      </div>
+
+      <!-- Payment method tabs -->
+      <div class="bank-tabs">
+        <button class="bank-tab active" onclick="switchBank('za')">🇿🇦 South Africa</button>
+        <button class="bank-tab" onclick="switchBank('mw')">🇲🇼 Malawi</button>
+      </div>
+
+      <!-- South Africa details -->
+      <div class="bank-panel active" id="bank-za">
+        <div class="eft-box">
+          <h4>Bank Transfer (EFT)</h4>
+          <div class="currency-badge">ZAR — South African Rand</div>
+          <div class="eft-row">
+            <span class="eft-label">Bank</span>
+            <span class="eft-value">Standard Bank</span>
+          </div>
+          <div class="eft-row">
+            <span class="eft-label">Account Holder</span>
+            <span class="eft-value">Mr Leeroy Chirwa</span>
+          </div>
+          <div class="eft-row">
+            <span class="eft-label">Account Number</span>
+            <span class="eft-value mono">101 403 005 01</span>
+          </div>
+          <div class="eft-row">
+            <span class="eft-label">Branch (SA)</span>
+            <span class="eft-value mono">051-001</span>
+          </div>
+          <div class="eft-row">
+            <span class="eft-label">Branch (JHB)</span>
+            <span class="eft-value mono">002-05</span>
+          </div>
+          <div class="eft-row">
+            <span class="eft-label">SWIFT / BIC</span>
+            <span class="eft-value mono">SBZAZAJJ</span>
+          </div>
+          <div class="eft-row">
+            <span class="eft-label">Amount</span>
+            <span class="eft-value gold" id="instr-amount-za"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Malawi details -->
+      <div class="bank-panel" id="bank-mw">
+        <div class="eft-box">
+          <h4>Bank Transfer (EFT)</h4>
+          <div class="currency-badge">MWK — Malawian Kwacha</div>
+          <div class="eft-row">
+            <span class="eft-label">Bank</span>
+            <span class="eft-value">National Bank of Malawi</span>
+          </div>
+          <div class="eft-row">
+            <span class="eft-label">Account Holder</span>
+            <span class="eft-value">Mr Leeroy Chirwa</span>
+          </div>
+          <div class="eft-row">
+            <span class="eft-label">Account Number</span>
+            <span class="eft-value mono">101 416 702 8</span>
+          </div>
+          <div class="eft-row">
+            <span class="eft-label">Branch</span>
+            <span class="eft-value mono">NBMAMWMW008</span>
+          </div>
+          <div class="eft-row">
+            <span class="eft-label">Reference</span>
+            <span class="eft-value mono">MWI</span>
+          </div>
+          <div class="eft-row">
+            <span class="eft-label">Amount</span>
+            <span class="eft-value gold" id="instr-amount-mw"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- How to pay steps -->
+      <ol class="steps-list">
+        <li>Open your banking app or log into online banking.</li>
+        <li>Create a new payment / transfer to the account details above.</li>
+        <li>Enter the <b style="color:#E5C158;">exact amount</b> and include your <b style="color:#E5C158;">reference number</b> — this is how we match your payment to your enrolment.</li>
+        <li>Complete the payment. You will receive an SMS or email confirmation from your bank.</li>
+        <li>Return here and submit your proof of payment below.</li>
+      </ol>
+
+      <!-- Proof of payment form -->
+      <div class="proof-section" id="proof-section">
+        <h4>Submit Proof of Payment</h4>
+        <div id="proof-form">
+          <div class="field">
+            <label>Your Full Name <span style="color:#E5C158;">*</span></label>
+            <input type="text" id="proof-name" placeholder="As it appears on your bank statement">
+          </div>
+          <div class="field">
+            <label>Email Address <span style="color:#E5C158;">*</span></label>
+            <input type="email" id="proof-email" placeholder="you@example.com">
+          </div>
+          <div class="field">
+            <label>Phone (optional)</label>
+            <input type="tel" id="proof-phone" placeholder="+27...">
+          </div>
+          <div class="field">
+            <label>Payment Method</label>
+            <select id="proof-method">
+              <option value="EFT">Bank Transfer (EFT)</option>
+              <option value="Card">Card Payment (Visa / Mastercard)</option>
+              <option value="SnapScan">SnapScan</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Your Bank / Sender Name (optional)</label>
+            <input type="text" id="proof-bank" placeholder="e.g. Standard Bank — John Smith">
+          </div>
+          <div class="field">
+            <label>Notes / Reference from your bank (optional)</label>
+            <textarea id="proof-notes" placeholder="Paste your bank confirmation number, screenshot description, or any details that help us verify your payment."></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-cancel" onclick="backToProgrammes()">Back</button>
+            <button type="button" class="btn-confirm" id="proof-submit" onclick="submitProof()">Submit Proof →</button>
+          </div>
+          <p style="font-size:11px;color:#555;margin-top:14px;text-align:center;">Our team will verify your payment within 24 hours. You will receive a confirmation email once approved.</p>
+        </div>
+
+        <!-- Success state -->
+        <div class="proof-success" id="proof-success">
+          <div class="icon">&#10003;</div>
+          <h3>Proof of Payment Received</h3>
+          <div class="ref-display" id="success-ref"></div>
+          <p>Your enrolment has been submitted. Our team will verify your payment and get back to you within 24 hours. You will receive a confirmation email at the address you provided.</p>
+          <p style="font-size:12px;color:#888;">If you have any questions, contact us at <b>realityfx20@gmail.com</b></p>
+          <a href="index.html" class="enrol-btn" style="display:inline-block;width:auto;margin-top:10px;">Back to Reception</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 1: enrol form overlay -->
+<div class="payment-form-overlay" id="pay-overlay">
+  <div class="payment-form-box">
+    <h3>Complete Your Enrollment</h3>
+    <div class="selected-tier-label" id="selected-tier-label"></div>
+    <form id="pay-form" onsubmit="return proceedToPayment(event)">
+      <div class="field">
+        <label>Full Name <span style="color:#E5C158;">*</span></label>
+        <input type="text" id="pay-name" placeholder="Your full name" required>
+      </div>
+      <div class="field">
+        <label>Email Address <span style="color:#E5C158;">*</span></label>
+        <input type="email" id="pay-email" placeholder="you@example.com" required>
+      </div>
+      <div class="field">
+        <label>Phone (optional)</label>
+        <input type="tel" id="pay-phone" placeholder="+27...">
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn-cancel" onclick="closeOverlay()">Cancel</button>
+        <button type="submit" class="btn-confirm" id="pay-submit">Continue →</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ─── Configuration ─── */
+  var EMAIL_ENDPOINT = 'https://us-central1-reality-fx-production-25796.cloudfunctions.net/sendEmail';
+  var MANUAL_PAYMENT_ENDPOINT = 'https://us-central1-reality-fx-production-25796.cloudfunctions.net/manualPayment';
+  var SYSTEM_A_BASE = 'https://reality-fx-production-25796.web.app';
+
+  var TIERS = [
+    { id: 'BASIC',   name: 'Reality FX — BASIC',   price: 1500,   tagline: 'Entry-level self-directed pathway', features: ['Self-directed Academy access','Standard Intelligent Assessments','Student Portal access','RFX wallet','Email support'], notIncluded: ['Private mentoring','Live learning sessions','Arena access','Advanced analytics'] },
+    { id: 'CORE',    name: 'Reality FX — CORE',    price: 2600,   tagline: 'Flagship foundation programme', features: ['Full Academy OS access','Structured learning path','Core Intelligent Assessments','Student Portal + wallet','Workshops','Email + live support'], notIncluded: ['Private mentoring','Live sessions','Arena access'], recommended: true },
+    { id: 'PRO',     name: 'Reality FX — PRO',     price: 4500,   tagline: 'Practical development + Arena', features: ['Everything in CORE','Arena access','Practical exercises','Advanced workshops','Challenging assessments','Enhanced development resources'], notIncluded: ['Private mentoring','Live sessions'] },
+    { id: 'ELITE',   name: 'Reality FX — ELITE',   price: 6000,   tagline: 'Advanced competency pathway', features: ['Everything in PRO','Elite assessments','Advanced Arena / workshops','Advanced performance analytics','Higher-level trading preparation'], notIncluded: ['Private mentoring','Live sessions'] },
+    { id: 'MASTERY', name: 'Reality FX — MASTERY',  price: 10000,  tagline: 'Premium / private development', features: ['Everything in ELITE','Private mentoring','Personalised development','Specialised challenges','Direct high-level guidance','Live learning sessions','Individual performance review'], notIncluded: [] },
+  ];
+
+  var grid = document.getElementById('programmes');
+  var overlay = document.getElementById('pay-overlay');
+  var instructionsPanel = document.getElementById('payment-instructions');
+  var programmesSection = document.getElementById('programmes-section');
+  var selectedTier = null;
+  var currentRef = null;
+
+  /* ─── Render programme cards ─── */
+  var html = '';
+  for (var i = 0; i < TIERS.length; i++) {
+    var t = TIERS[i];
+    var featuresHtml = '';
+    for (var j = 0; j < t.features.length; j++) {
+      featuresHtml += '<li>' + t.features[j] + '</li>';
+    }
+    for (var k = 0; k < t.notIncluded.length; k++) {
+      featuresHtml += '<li class="not-included">' + t.notIncluded[k] + '</li>';
+    }
+    html += '<div class="programme-card' + (t.recommended ? ' recommended' : '') + '" data-tier="' + t.id + '">' +
+      '<div class="tier-name">' + t.name.replace('Reality FX — ', '') + '</div>' +
+      '<div class="tier-tagline">' + t.tagline + '</div>' +
+      '<div class="tier-price"><span class="currency">R</span>' + t.price.toLocaleString() + '</div>' +
+      '<ul class="tier-features">' + featuresHtml + '</ul>' +
+      '<button class="enrol-btn" onclick="selectTier(\'' + t.id + '\')">' + (t.recommended ? 'Enrol Now &#9733;' : 'Enrol Now') + '</button>' +
+      '</div>';
+  }
+  grid.innerHTML = html;
+
+  /* ─── Step 1: Select tier → open form ─── */
+  window.selectTier = function (tierId) {
+    selectedTier = TIERS.find(function (t) { return t.id === tierId; });
+    if (!selectedTier) return;
+    document.getElementById('selected-tier-label').textContent = selectedTier.name + ' — R' + selectedTier.price.toLocaleString();
+    overlay.classList.add('active');
+    document.getElementById('pay-name').focus();
+  };
+
+  window.closeOverlay = function () {
+    overlay.classList.remove('active');
+    selectedTier = null;
+  };
+
+  /* ─── Bank country tabs ─── */
+  window.switchBank = function (country) {
+    var tabs = document.querySelectorAll('.bank-tab');
+    for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
+    var panels = document.querySelectorAll('.bank-panel');
+    for (var i = 0; i < panels.length; i++) panels[i].classList.remove('active');
+    if (country === 'za') {
+      tabs[0].classList.add('active');
+      document.getElementById('bank-za').classList.add('active');
+    } else {
+      tabs[1].classList.add('active');
+      document.getElementById('bank-mw').classList.add('active');
+    }
+  };
+
+  /* ─── Step 2: Form submitted → show payment instructions ─── */
+  window.proceedToPayment = function (e) {
+    e.preventDefault();
+    if (!selectedTier) return false;
+
+    var name = document.getElementById('pay-name').value.trim();
+    var email = document.getElementById('pay-email').value.trim();
+    var phone = document.getElementById('pay-phone').value.trim();
+
+    if (!name || !email) return false;
+
+    // Generate unique reference
+    currentRef = 'RFX-' + selectedTier.id + '-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+
+    // Store for later
+    window._enrolData = {
+      tier: selectedTier.id,
+      tierName: selectedTier.name,
+      price: selectedTier.price,
+      name: name,
+      email: email,
+      phone: phone,
+      ref: currentRef,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Populate instructions
+    document.getElementById('instr-sub').textContent = 'Complete your ' + selectedTier.name + ' enrolment by making a payment of R' + selectedTier.price.toLocaleString() + '.';
+    document.getElementById('instr-ref').textContent = currentRef;
+    var amtStr = 'R' + selectedTier.price.toLocaleString() + '.00';
+    document.getElementById('instr-amount-za').textContent = amtStr;
+    document.getElementById('instr-amount-mw').textContent = amtStr;
+
+    // Pre-fill proof form
+    document.getElementById('proof-name').value = name;
+    document.getElementById('proof-email').value = email;
+    document.getElementById('proof-phone').value = phone;
+
+    // Store payment record in localStorage + Cloud Function
+    savePaymentRecord(window._enrolData);
+    submitToCloud(window._enrolData);
+
+    // Show instructions, hide programmes
+    overlay.classList.remove('active');
+    programmesSection.style.display = 'none';
+    instructionsPanel.classList.add('active');
+
+    // Send confirmation email (fire and forget)
+    sendEnrolmentEmail(window._enrolData);
+
+    // Scroll to top
+    window.scrollTo(0, 0);
+
+    return false;
+  };
+
+  /* ─── Step 3: Submit proof of payment ─── */
+  window.submitProof = function () {
+    var name = document.getElementById('proof-name').value.trim();
+    var email = document.getElementById('proof-email').value.trim();
+    var method = document.getElementById('proof-method').value;
+    var bank = document.getElementById('proof-bank').value.trim();
+    var notes = document.getElementById('proof-notes').value.trim();
+
+    if (!name || !email) {
+      alert('Please enter your full name and email address.');
+      return;
+    }
+
+    var btn = document.getElementById('proof-submit');
+    btn.textContent = 'Submitting...';
+    btn.disabled = true;
+
+    // Update payment record with proof details
+    var record = window._enrolData || {};
+    record.proofOfPayment = {
+      name: name,
+      email: email,
+      phone: document.getElementById('proof-phone').value.trim(),
+      paymentMethod: method,
+      bankName: bank,
+      notes: notes,
+      submittedAt: new Date().toISOString(),
+    };
+    record.status = 'PROOF_SUBMITTED';
+    record.paymentStatus = 'PENDING_VERIFICATION';
+
+    // Update localStorage + Cloud Function
+    updatePaymentRecord(record);
+    submitProofToCloud(record);
+
+    // Also save as an enrollment in the System A database (if db.js is available)
+    if (window.RFX && window.RFX.db) {
+      try {
+        // Create enrollment record via existing System A mechanism
+        var enr = {
+          payment: {
+            customerName: record.name,
+            email: record.email,
+            course: record.tierName,
+            tier: record.tier,
+            price: record.price,
+            currency: 'ZAR',
+            transactionId: record.ref,
+            paymentMethod: method,
+            phone: record.phone || '',
+            status: 'PENDING_VERIFICATION',
+          },
+        };
+        // The admin will pick this up and verify
+      } catch (e) { /* db.js not loaded — will be picked up by admin panel */ }
+    }
+
+    // Notify Reality FX team via email
+    sendPaymentNotification(record);
+
+    // Show success
+    document.getElementById('proof-form').style.display = 'none';
+    document.getElementById('success-ref').textContent = record.ref;
+    document.getElementById('proof-success').classList.add('active');
+
+    btn.textContent = 'Submit Proof →';
+    btn.disabled = false;
+  };
+
+  window.backToProgrammes = function () {
+    instructionsPanel.classList.remove('active');
+    programmesSection.style.display = 'block';
+    selectedTier = null;
+    currentRef = null;
+    window.scrollTo(0, 0);
+  };
+
+  /* ─── Persistence ─── */
+  function savePaymentRecord(data) {
+    try {
+      var records = JSON.parse(localStorage.getItem('rfx_payments') || '[]');
+      records.push(data);
+      localStorage.setItem('rfx_payments', JSON.stringify(records));
+    } catch (e) { /* localStorage unavailable */ }
+  }
+
+  function updatePaymentRecord(data) {
+    try {
+      var records = JSON.parse(localStorage.getItem('rfx_payments') || '[]');
+      for (var i = 0; i < records.length; i++) {
+        if (records[i].ref === data.ref) {
+          records[i] = data;
+          break;
+        }
+      }
+      localStorage.setItem('rfx_payments', JSON.stringify(records));
+    } catch (e) { /* localStorage unavailable */ }
+  }
+
+  /* ─── Emails (fire and forget) ─── */
+  function sendEnrolmentEmail(data) {
+    var html = '<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#101010;border:1px solid rgba(201,162,39,.35);border-radius:14px;overflow:hidden;">' +
+      '<div style="padding:26px 34px 18px;border-bottom:1px solid rgba(201,162,39,.25);">' +
+      '<div style="font-family:Georgia,serif;font-size:22px;font-weight:700;letter-spacing:3px;color:#E5C158;">REALITY FX</div>' +
+      '<div style="font-size:10px;letter-spacing:4px;color:#8a8a8a;margin-top:4px;">THE TRADING ACADEMY</div></div>' +
+      '<div style="padding:28px 34px;">' +
+      '<div style="font-family:Georgia,serif;font-size:20px;color:#E5E5E5;font-weight:600;">Welcome, ' + escHtml(data.name) + '</div>' +
+      '<p style="font-size:14px;line-height:1.7;color:#b9b2a2;margin:14px 0 0;">Thank you for choosing <b style="color:#E5E5E5;">' + escHtml(data.tierName) + '</b>. Your enrolment has been received and your place is reserved.</p>' +
+      '<div style="background:#141414;border:1px solid rgba(201,162,39,.4);border-radius:12px;padding:20px 24px;margin:20px 0;">' +
+      '<div style="font-size:10px;letter-spacing:2.5px;color:#8a8a8a;text-transform:uppercase;">Your Enrolment Reference</div>' +
+      '<div style="font-family:monospace;font-size:18px;font-weight:700;color:#E5C158;margin-top:6px;">' + escHtml(data.ref) + '</div>' +
+      '<div style="font-size:12px;color:#8a8a8a;margin-top:4px;">Programme: ' + escHtml(data.tierName) + '</div>' +
+      '<div style="font-size:12px;color:#8a8a8a;">Amount: R' + data.price.toLocaleString() + '</div></div>' +
+      '<p style="font-size:13px;color:#b9b2a2;line-height:1.7;">To complete your enrolment, please make a payment of <b style="color:#E5C158;">R' + data.price.toLocaleString() + '</b> and submit your proof of payment at:</p>' +
+      '<div style="text-align:center;margin:18px 0;">' +
+      '<a href="' + SYSTEM_A_BASE + '/payment.html" style="display:inline-block;background:linear-gradient(135deg,#f0d98c,#d4af37);color:#241a05;text-decoration:none;font-weight:700;padding:12px 28px;border-radius:10px;font-size:14px;">Submit Payment</a></div>' +
+      '<p style="font-size:12px;color:#5c5c5c;line-height:1.6;">If you have any questions, reply to this email or contact us at <b>realityfx20@gmail.com</b>.</p>' +
+      '</div></div>';
+
+    fireEmail(data.email, 'Your Reality FX Enrolment — ' + data.ref, html);
+  }
+
+  function sendPaymentNotification(data) {
+    var html = '<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#101010;border:1px solid rgba(201,162,39,.35);border-radius:14px;overflow:hidden;">' +
+      '<div style="padding:26px 34px 18px;border-bottom:1px solid rgba(201,162,39,.25);">' +
+      '<div style="font-family:Georgia,serif;font-size:22px;font-weight:700;letter-spacing:3px;color:#E5C158;">REALITY FX</div>' +
+      '<div style="font-size:10px;letter-spacing:4px;color:#8a8a8a;margin-top:4px;">ADMIN NOTIFICATION</div></div>' +
+      '<div style="padding:28px 34px;">' +
+      '<div style="font-family:Georgia,serif;font-size:20px;color:#E5E5E5;font-weight:600;">Proof of Payment Submitted</div>' +
+      '<div style="background:#141414;border:1px solid rgba(201,162,39,.4);border-radius:12px;padding:20px 24px;margin:20px 0;">' +
+      '<div style="font-size:13px;color:#b9b2a2;line-height:1.8;">' +
+      '<b style="color:#E5E5E5;">Reference:</b> ' + escHtml(data.ref) + '<br>' +
+      '<b style="color:#E5E5E5;">Student:</b> ' + escHtml(data.name) + '<br>' +
+      '<b style="color:#E5E5E5;">Email:</b> ' + escHtml(data.email) + '<br>' +
+      '<b style="color:#E5E5E5;">Programme:</b> ' + escHtml(data.tierName) + '<br>' +
+      '<b style="color:#E5E5E5;">Amount:</b> R' + data.price.toLocaleString() + '<br>' +
+      '<b style="color:#E5E5E5;">Payment Method:</b> ' + escHtml(data.proofOfPayment.paymentMethod) + '<br>' +
+      '<b style="color:#E5E5E5;">Bank / Sender:</b> ' + escHtml(data.proofOfPayment.bankName || 'Not provided') + '<br>' +
+      '<b style="color:#E5E5E5;">Notes:</b> ' + escHtml(data.proofOfPayment.notes || 'None') +
+      '</div></div>' +
+      '<p style="font-size:12px;color:#5c5c5c;line-height:1.6;">Action required: Verify this payment in the Admin Panel and approve the enrolment.</p>' +
+      '</div></div>';
+
+    fireEmail('realityfx20@gmail.com', 'Payment Proof — ' + data.ref + ' — ' + data.name, html);
+  }
+
+  function fireEmail(to, subject, html) {
+    try {
+      fetch(EMAIL_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: to, subject: subject, html: html }),
+      }).catch(function () { /* fire and forget */ });
+    } catch (e) { /* email not critical */ }
+  }
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* ─── Cloud Function submissions ─── */
+  function submitToCloud(data) {
+    try {
+      fetch(MANUAL_PAYMENT_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ref: data.ref,
+          tier: data.tier,
+          tierName: data.tierName,
+          price: data.price,
+          name: data.name,
+          email: data.email,
+          phone: data.phone || '',
+          paymentMethod: 'EFT',
+        }),
+      }).catch(function () { /* cloud submission is supplementary to localStorage */ });
+    } catch (e) { /* best effort */ }
+  }
+
+  function submitProofToCloud(record) {
+    try {
+      var proof = record.proofOfPayment || {};
+      fetch(MANUAL_PAYMENT_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ref: record.ref,
+          tier: record.tier,
+          tierName: record.tierName,
+          price: record.price,
+          name: proof.name || record.name,
+          email: proof.email || record.email,
+          phone: proof.phone || record.phone || '',
+          paymentMethod: proof.paymentMethod || 'EFT',
+          bankName: proof.bankName || '',
+          notes: proof.notes || '',
+        }),
+      }).catch(function () { /* best effort */ });
+    } catch (e) { /* best effort */ }
+  }
+
+  /* Close overlay on backdrop click */
+  overlay.addEventListener('click', function (e) {
+    if (e.target === overlay) window.closeOverlay();
+  });
+})();
+</script>
+</body>
+</html>
