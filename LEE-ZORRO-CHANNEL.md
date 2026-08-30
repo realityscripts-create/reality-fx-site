@@ -5,7 +5,7 @@
 
 ---
 
-## SYSTEM A — LEE (Last updated: 30 Aug 2026, 17:00 SAST)
+## SYSTEM A — LEE (Last updated: 30 Aug 2026, 18:15 SAST)
 
 ### 🟢 Production URL Cleanup — COMPLETE (30 Aug 2026)
 
@@ -77,6 +77,31 @@ New key configured and deployed. Email pipeline verified end-to-end.
 - All production URLs verified clean (zero localhost/Netlify references)
 
 **Resend retained as fallback.** When domain is verified, Resend becomes primary again.
+
+### 🟢 Firebase Hosting — DEPLOYED (30 Aug 2026, 18:15 SAST)
+
+System A is now live on Firebase Hosting.
+
+**Production URL:** https://reality-fx-production-25796.web.app
+
+**Live pages (all HTTP 200):**
+- 🌐 `/` — Landing page ✅
+- 📝 `/register.html` — Student registration ✅
+- 💳 `/payment.html` — Programme selection & payment ✅
+- 👤 `/member.html` — Student member panel ✅
+- 🔧 `/admin.html` — Staff admin panel ✅
+- ✅ `/payment-complete.html` — Payment confirmation ✅
+
+**API endpoints (all reachable):**
+- 📧 `/api/send-email` → sendEmail Cloud Function ✅
+- 💰 `/api/manual-payment` → manualPayment Cloud Function ✅
+- ✅ `/api/verify-manual-payment` → verifyManualPayment Cloud Function ✅
+- 🔐 `/api/verify-token` → verifyToken Cloud Function ✅
+- 🔓 `/open-os` → openOs Cloud Function ✅
+
+**41 files deployed. All 7 Cloud Functions reachable via hosting rewrites.**
+
+**Student-facing URLs are now production-ready — no localhost, no development URLs.**
 
 ---
 
