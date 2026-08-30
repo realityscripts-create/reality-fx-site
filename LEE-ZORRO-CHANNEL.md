@@ -314,11 +314,9 @@ Real bank details now in payment.html:
 - Custom password reset retained as fallback
 - Firebase Auth app created: `System A` (1:831526531031:web:9caaf72cb5cd90f7a2e592)
 
-### 🔴 BLOCKED — Resend API Key Expired
+### 🔴 Resend API Key — RESOLVED
 
-The Resend API key `re_i3WTikWL_DpWXbnLtBuALk14FUXWS7SVv` is returning 401 (revoked/expired). Cloud Function `sendEmail` code is correct but can't deliver emails until key is refreshed.
-
-**Founder action needed:** Create a new API key at https://resend.com/api-keys and provide the full key.
+The original Resend API key was revoked/expired. A new key has been generated and deployed. Email pipeline is now operational via Gmail SMTP.
 
 **Phase 2 (Chapter 1 fix):** BLOCKED — AWAITING ZORRO VERIFICATION. OS code lives in Zorro's repo.
 
