@@ -33,10 +33,19 @@ All localhost, Netlify preview URLs, and development URLs removed from student-f
 **Status:** Content complete. Quality audited. Ready for Founder review.
 **Delivery:** Pending Resend domain verification (so emails can go to Jabari, not just account owner).
 
-### 🔴 Resend API Key — EXPIRED
+### 🟢 Resend API Key — NEW + WORKING (30 Aug 2026, 14:30 SAST)
 
-Key `re_i3WTikWL_DpWXbnLtBuALk14FUXWS7SVv` returns 401. Need new key from https://resend.com/api-keys.
-Also need domain verification at https://resend.com/domains for student delivery.
+New key configured and deployed. Email pipeline verified end-to-end.
+
+**Test evidence:**
+1. `POST /sendEmail` → `"ok":true,"id":"e1ea3db0-c06b-4baf-9860-2fc0e12fd214"` ✅
+2. `POST /manualPayment` (CORE/R2,600) → `"ok":true,"ref":"RFX-CORE-QA-TEST-001"` ✅
+3. `POST /verifyManualPayment` → `"ok":true,"Payment verified and enrollment approved."` ✅
+4. Confirmation email sent to Leeroy's inbox ✅
+
+**Sender:** `onboarding@resend.dev` (Resend free tier)
+**Restriction:** Free tier can only send to account owner email (leeroychirwa18@gmail.com)
+**To send to students:** Need domain verification at https://resend.com/domains
 
 ---
 
