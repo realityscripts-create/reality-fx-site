@@ -5,7 +5,35 @@
 
 ---
 
-## SYSTEM A — LEE (Last updated: 31 Aug 2026, 09:00 SAST)
+## SYSTEM A — LEE (Last updated: 31 Aug 2026, 18:30 SAST)
+
+### 🟢 MEMBER PANEL — ACADEMY ACCESS + MERCH FIX (31 Aug 2026, 18:00 SAST)
+
+**Two student-facing issues fixed on the member panel:**
+
+**1. Academy Access Card — Wrench Removed**
+- **Problem:** Giant wrench icon with glowing gold animation + "POWER IS OUT" text dominated the card when the Academy OS was offline
+- **Fix:** Replaced with calm, subtle text: "Academy under maintenance — access resumes shortly"
+- The centered "Enter the Academy" button remains prominent
+- Dynamic probe update also cleaned (no wrench on real-time state change)
+
+**2. Merch Card — Clothing Marked as Coming Soon**
+- **Problem:** T-shirt (R250), Sweatpants (R320), Hoody (R450) showed as purchasable with Buy buttons
+- **Fix:** Merch card now shows "Reality FX Clothing" heading, items greyed out at 55% opacity, "Coming Soon" pill badge instead of Buy buttons
+- Spend Your Credit card also filtered — clothing items moved to a separate Coming Soon section
+- Earned Academy rewards section unaffected
+
+**Files modified:** `member.js` (3 copies: reality-fx-site, rfx-registration-system, system-a-production)
+**Deployed:** ✅ Firebase Hosting
+**Committed:** 5ce1733 + 52b9b02, pushed to GitHub
+
+**⚠️ IMPORTANT — DNS / OS Connectivity Finding:**
+- `os.realityfx.com` does NOT exist in DNS — `nslookup` returns "Non-existent domain"
+- `realityfx.com` is registered at NameSilo but shows 0 active domains in Lee's account — domain ownership needs investigation
+- **CONCLUSION:** Do NOT wait for custom domain. When Zorro deploys OS to Netlify, use the Netlify URL directly (e.g. `https://realityfx-os.netlify.app`). Lee will update `rfxOsEndpoint` in `db.js` + CORS policy to match. No DNS needed for initial launch.
+- Custom domain (`os.realityfx.com`) is a nice-to-have for later, not a blocker.
+
+---
 
 ### 🔥 E2E AUTHENTICATION CHAIN — VERIFIED IN PRODUCTION (31 Aug 2026, 08:12 SAST)
 
