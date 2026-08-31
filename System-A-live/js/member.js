@@ -973,7 +973,10 @@
     const I = RFX.icons || {};
     const usable = db.spendable(enr.payment.email);
     const w = db.getWallet(enr.payment.email);
-    const catalog = db.getCatalog(); // already sorted price descending
+    const allCatalog = db.getCatalog(); // already sorted price descending
+    // Separate merch (clothing) from spendable items — merch is coming soon
+    const catalog = allCatalog.filter(it => it.kind !== 'merch');
+    const merchItems = allCatalog.filter(it => it.kind === 'merch');
     const rows = catalog.map(it => {
       const afford = usable >= it.price;
       return '<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);">' +
@@ -986,11 +989,26 @@
           : '<button class="btn btn-dark btn-sm" disabled title="Need ' + db.money(it.price - usable, it.currency || w.currency) + ' more">' + db.money(it.price - usable, it.currency || w.currency) + ' short</button>') +
         '</div>';
     }).join('');
+    const merchComingSoon = merchItems.length
+      ? '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">' +
+        '<div class="eyebrow muted" style="margin-bottom:8px;">Reality FX Clothing</div>' +
+        merchItems.map(it =>
+          '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;opacity:0.5;">' +
+          '<div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+          '<span class="mono" style="font-size:10px;color:var(--gold-bright);letter-spacing:0.5px;">' + ui.esc(it.code) + '</span>' +
+          '<b style="color:var(--text);font-size:12.5px;">' + ui.esc(it.name) + '</b></div>' +
+          '<div class="small faint">' + db.money(it.price, it.currency || w.currency) + '</div></div>' +
+          '<span class="pill" style="font-size:9px;color:var(--muted);border-color:var(--border);">Coming Soon</span>' +
+          '</div>'
+        ).join('') +
+        '<p class="small faint" style="margin-top:8px;">Official Reality FX apparel — launching soon.</p></div>'
+      : '';
     return '<div class="card"><div class="eyebrow muted" style="margin-bottom:10px;">Spend your credit</div>' +
       '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px;">' +
       '<span class="num gold" style="font-size:26px;">' + db.money(usable, w.currency) + '</span>' +
       '<span class="small faint">spendable now (expired credits excluded)</span></div>' +
       '<div style="margin-bottom:6px;">' + rows + '</div>' +
+      merchComingSoon +
       '<div style="display:flex;gap:8px;margin-top:12px;">' +
       '<input class="input" id="sp-custom" type="number" placeholder="Custom amount" style="flex:1;">' +
       '<button class="btn btn-ghost btn-sm" id="sp-apply-custom">Apply to next course</button></div>' +
@@ -1144,8 +1162,7 @@
         // again later"; they are being told the Academy is being maintained
         // and that their access is safe. Calm, warm, never dismissive.
         lab.innerHTML = up
-          ? (powerOn ? 'The Academy is back online — lights are on.' : 'The Academy is online and waiting for you.')
-          : '<span class="spanner-glow" title="The Academy is being repaired right now — our engineers are on it. Your access is safe and waiting for you. Please be patient — this is temporary.">' + (RFX.icons && RFX.icons.wrench ? RFX.icons.wrench : '') + '</span> <span class="maintenance-inline">Academy maintenance in progress</span>' + (RFX.icons && RFX.icons.power ? '<span class="os-power-tag">' + RFX.icons.power + ' power is out</span>' : '');
+          ? (powerOn ? 'The Academy is back online — lights are on.' : 'The Academy is online and waiting for you.')          : '<span style="color:var(--muted);font-size:12px;">Academy under maintenance — access resumes shortly</span>';
       }
       if (row) {
         row.classList.remove('power-on');
@@ -1263,7 +1280,7 @@
         '<div id="os-probe-row" class="os-probe-row' + (osProbeState === 'down' ? ' os-off' : '') + '" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;">' +
         '<span class="dot ' + (osProbeState === 'down' ? 'off' : osProbeState === 'up' ? 'ok pulse' : '') + '"></span>' +
         '<span class="small" style="color:var(--muted);" id="os-probe-label">' +
-        (osProbeState === 'down' ? '<span class="spanner-glow" title="The Academy is being repaired right now — our engineers are on it. Your access is safe and waiting for you. Please be patient — this is temporary.">' + (I.wrench || '') + '</span> <span class="maintenance-inline">Academy maintenance in progress</span><span class="os-power-tag">' + (I.power || '') + ' power is out</span>'
+        (osProbeState === 'down' ? '<span style="color:var(--muted);font-size:12px;">Academy under maintenance — access resumes shortly</span>'
           : (osProbeState === 'up' ? 'The Academy is online and waiting for you.'
             : 'Checking the Academy link…')) + '</span></div>' +
         '<a class="btn btn-gold" id="os-enter-btn" href="' + osUrl + '" target="_blank" style="width:100%;">' + (I.unlock || '') + ' Enter the Academy</a>' +
