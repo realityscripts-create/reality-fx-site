@@ -960,10 +960,20 @@
 
     return '<div class="card"><div class="eyebrow muted" style="margin-bottom:10px;">Merch</div>' +
       (earnedBlock || '') +
-      '<div class="eyebrow muted" style="margin:' + (earned ? '16px 0 4px;' : '0 0 4px;') + '">Shop with your RFX balance</div>' +
-      (catalog.length ? '<div>' + shopRows + shopAddr + '</div>' : '<p class="small faint">No merch on the catalog yet.</p>') +
+      '<div class="eyebrow muted" style="margin:' + (earned ? '16px 0 4px;' : '0 0 4px;') + '">Reality FX Clothing</div>' +
+      (catalog.length
+        ? '<div style="opacity:0.55;">' + catalog.map(it =>
+          '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">' +
+          '<div style="flex:1;"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">' +
+          '<span class="mono" style="font-size:10px;color:var(--gold-bright);">' + ui.esc(it.code) + '</span>' +
+          '<b style="color:var(--text);font-size:12.5px;">' + ui.esc(it.name) + '</b></div>' +
+          '<div class="small faint">' + db.money(it.price, w.currency) + (it.note ? ' · ' + ui.esc(it.note) : '') + '</div></div>' +
+          '<span class="pill" style="font-size:9px;color:var(--muted);border-color:var(--border);">Coming Soon</span>' +
+          '</div>'
+        ).join('') + '</div>'
+        : '') +
       (myRows || '') +
-      '<p class="small faint" style="margin-top:10px;">Merch is physical — it needs a size and delivery address, then flows through the fulfilment queue (packing → shipped → delivered). Your earned reward is a free gift from the Academy, never credit.</p></div>';
+      '<p class="small faint" style="margin-top:10px;">Official Reality FX apparel — launching soon. Earned Academy rewards remain unaffected.</p></div>';
   }
 
   /* Spend surface — NOT a store. The website store owns products (each with a
