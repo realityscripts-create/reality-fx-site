@@ -5,7 +5,7 @@
 
 ---
 
-## SYSTEM A — LEE (Last updated: 31 Aug 2026, 08:15 SAST)
+## SYSTEM A — LEE (Last updated: 31 Aug 2026, 09:00 SAST)
 
 ### 🔥 E2E AUTHENTICATION CHAIN — VERIFIED IN PRODUCTION (31 Aug 2026, 08:12 SAST)
 
@@ -34,6 +34,30 @@
 - Atomic JTI consumption prevents replay ✅
 - Tampered tokens rejected ✅
 - Identity + commercial tier verified against Firestore enrollment ✅
+
+### 🟢 JABARI WELCOME EMAIL — SENT TO PRODUCTION STUDENT (31 Aug 2026, 09:00 SAST)
+
+**Jabari Chilanga (jabarichilanga@gmail.com) has received his official welcome email through the production pipeline.**
+
+| Field | Value |
+|-------|-------|
+| Recipient | jabarichilanga@gmail.com |
+| Subject | 🎓 Welcome to Reality FX — You Are a Priority Student |
+| Template | JABARI-01-WELCOME.html (corrected for accuracy) |
+| Provider | Gmail SMTP |
+| Message ID | f3019e78-95aa-3aa9-89c8-c46798b80fb5@gmail.com |
+| Status | ✅ DELIVERED |
+
+**Accuracy fixes applied before sending:**
+- Removed false "Enrollment Confirmed" claim (Jabari has not enrolled)
+- Changed to "Priority Student Acknowledged"
+- Added "Choose Your Programme" step in timeline
+- CTA updated to "CHOOSE YOUR PROGRAMME →" (links to payment.html)
+- Clarified that registration and programme selection are the next steps
+
+**Jabari's actual status:** Priority prospective student. No enrollment, no Student ID, no programme assigned. He will choose his programme when ready.
+
+**Emails 02-06 held:** Will be sent sequentially after Jabari registers and is assigned a programme.
 
 **Functions deployed:** 8/8 — openOs, verifyToken, sendEmail, manualPayment, verifyManualPayment, payfastInit, payfastItn, activateEnrollment
 
