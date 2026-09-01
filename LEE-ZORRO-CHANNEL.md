@@ -5,7 +5,7 @@
 
 ---
 
-## SYSTEM A — LEE (Last updated: 1 Sep 2026, 08:30 SAST)
+## SYSTEM A — LEE (Last updated: 1 Sep 2026, 09:15 SAST)
 
 ### 🟢 MEMBER PANEL — ACADEMY ACCESS + MERCH FIX (31 Aug 2026, 18:00 SAST)
 
@@ -441,12 +441,25 @@ Real bank details now in payment.html:
 - Staff receive staff-only access (Live Studio, etc.)
 - Founder-only/admin-only areas remain appropriately restricted
 
-**⚠️ ONE CAVEAT — localStorage vs Firestore:**
-- Staff records currently stored in localStorage (demo architecture)
-- If admin creates staff from browser localStorage, the invite email is sent
-- BUT if staff member opens `staff.html` on a DIFFERENT device, the record won't exist there
-- **Production fix needed:** Firestore sync for staff records (same pattern as student enrollment sync)
-- This is a known architectural gap from FOR-LEE.md — staff should use Firebase Auth + custom claims in production
+#### Staff Record Authority — localStorage vs Firestore (Clarified)
+
+**localStorage (staff console UI only):**
+- Staff records (`state.staff[]`) — name, email, role, code, shifts, performance
+- Staff login attempts / lockout state
+- Staff duties, shifts, coverage data
+- **Only affects the staff console UI — not Academy OS authentication**
+
+**Firestore (Academy OS authentication — authoritative):**
+- Enrollment records — student identity, payment, tier, state
+- `openOs` Cloud Function queries **only Firestore** — never reads localStorage
+- JWT claims derived **exclusively** from Firestore enrollment records
+- `verifyToken` validates against Firestore-consumed tokens
+- Signing key in Firebase Runtime Config (not in source code)
+
+**Can localStorage influence Academy OS authorization?**
+**NO.** The Academy OS chain is: `openOs` → Firestore → JWT → `verifyToken` → Firestore. At no point does this chain read localStorage. A fake staff record in localStorage would only affect the staff console UI — not Academy OS access.
+
+**Staff → Academy OS note:** Staff members currently do NOT have a separate Academy OS authentication path. The "Enter the Academy" button queries Firestore `enrollments` by email — if a staff member has no enrollment record, they get "no-account." This is correct architecture. Staff authenticate through the staff console separately from students. Rethabile can fully use the staff console without Academy OS access.
 
 **Summary: Staff provisioning is built, deployed, and functional. The Founder can invite a staff member RIGHT NOW from the production admin panel. The email pipeline works. The only production gap is multi-device Firestore sync for staff records.**
 
@@ -525,12 +538,14 @@ Staff records live in **localStorage** on the browser where the admin creates th
 | Name | Jaymie Roach |
 | Email | roachjamie03@gmail.com |
 | Trial duration | 24 hours |
-| Trial tier | STANDARD (BASIC level — no CORE/PRO/ELITE/MASTERY) |
+| Commercial tier | BASIC (confirmed) |
+| Price | R0 (free trial) |
+| Learning access | STANDARD lane ONLY — entry-level self-directed |
 | Target start | 20 September 2026 |
 
-**Existing trial mechanism:** `createDemoPass()` in `db.js` — creates an enrollment with a time-boxed registration link. Currently defaults to the configured course (CORE/R2,600). Needs adjustment to create at STANDARD/BASIC tier for free trials.
+**⚠️ `createDemoPass()` code change required:** Currently defaults to CORE/R2,600. Must add `tier` and `price` parameters so it can produce `tier: 'BASIC', price: 0`. This is a small, targeted change — not architectural.
 
-**Action required:** When Jaymie's trial is ready, use `createDemoPass()` with modified tier = BASIC, price = 0, and 24-hour expiry. The existing email pipeline handles the rest.
+**Entitlement mapping confirmed:** BASIC = STANDARD learning access. No CORE/PRO/ELITE/MASTERY. The `commercialTier` in the JWT determines OS access.
 
 - Firebase Auth SDK loaded on member.html + admin.html
 - "Forgot Password?" now uses `sendPasswordResetEmail` (Firebase native)
